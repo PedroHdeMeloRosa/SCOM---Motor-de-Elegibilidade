@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNILEGI - Acesso</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/img/UNIELEGI logo.jpg">
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <style>
+        /* Estilos exclusivos para centralizar o Login na tela inteira */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--cinza-fundo);
+        }
+
+        .login-container {
+            background: var(--branco);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 5px solid var(--azul-primario);
+        }
+
+        .login-logo {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--azul-escuro);
+        }
+
+        .login-logo img {
+            height: 40px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .links-uteis {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .links-uteis a {
+            color: var(--azul-primario);
+            text-decoration: none;
+        }
+
+        .alerta-erro {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="login-logo">
+            <img src="../assets/img/UNIELEGI LOGO 2026.svg" alt="Logo UNILEGI">
+            <span>UNILEGI</span>
+        </div>
+
+        <div id="msg-erro" class="alerta-erro"></div>
+
+        <form id="form-login">
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" required placeholder="aluno@unesp.br">
+            </div>
+
+            <div class="form-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" id="btn-entrar" class="btn-primario" style="width: 100%;">Acessar Plataforma</button>
+
+            <div class="links-uteis">
+                <a href="../cadastro.html">Criar conta</a>
+                <a href="../esqueci_senha.php">Esqueceu a senha?</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('form-login').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-entrar');
+            const erroDiv = document.getElementById('msg-erro');
+
+            btn.textContent = "Autenticando...";
+            btn.disabled = true;
+            erroDiv.style.display = 'none';
+
+            const formData = new FormData(this);
+            const dadosLogin = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('../api/controllers/auth.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosLogin)
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok && resultado.sucesso) {
+                    // RBAC: Redirecionamento 3 Tiers
+                    if (resultado.perfil === 'DIRETOR' || resultado.perfil === 'COORDENADOR') {
+                        // Ambos vão para a área administrativa, mas o PHP definirá lá dentro o que cada um vê
+                        window.location.href = '../editor/dashboard.html';
+                    } else {
+                        // Estudante vai para o painel do aluno
+                        window.location.href = 'painel.html';
+                    }
+                } else {
+                    erroDiv.textContent = resultado.mensagem || "E-mail ou senha incorretos.";
+                    erroDiv.style.display = 'block';
+                }
+            } catch (error) {
+                erroDiv.textContent = "Erro de conexão com o servidor.";
+                erroDiv.style.display = 'block';
+            } finally {
+                btn.textContent = "Acessar Plataforma";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

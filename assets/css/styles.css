@@ -1,0 +1,319 @@
+/* =========================================
+   VARIÁVEIS GLOBAIS (Paleta UNILEGI)
+   ========================================= */
+:root {
+    --azul-escuro: #0a192f;
+    --azul-primario: #004488;
+    --azul-claro: #e6f0fa;
+    --branco: #ffffff;
+    --cinza-fundo: #f8f9fa;
+    --texto-escuro: #333333;
+    --texto-mutado: #666666;
+    
+    /* Tags de Probabilidade */
+    --tag-alta: #28a745;
+    --tag-media: #ffc107;
+    --tag-baixa: #dc3545;
+}
+
+/* =========================================
+   RESET E TIPOGRAFIA
+   ========================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--cinza-fundo);
+    color: var(--texto-escuro);
+    line-height: 1.6;
+    scroll-behavior: smooth;
+}
+
+/* =========================================
+   NAVBAR
+   ========================================= */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 5%;
+    background-color: var(--branco);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo {
+    display: flex;
+    align-items: center; /* Alinha a imagem e o texto no mesmo eixo vertical */
+    gap: 12px; /* Dá um respiro entre a imagem e o texto */
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--azul-escuro);
+    letter-spacing: 1px;
+}
+
+.logo-img {
+    height: 80px; /* Ajusta a altura da imagem para caber na barra sem quebrar o layout */
+    width: auto;  /* Mantém a proporção do SVG original */
+}
+
+.logo-icone {
+    color: var(--azul-primario);
+}
+
+.navbar ul {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.navbar a {
+    text-decoration: none;
+    color: var(--texto-escuro);
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.navbar a:hover {
+    color: var(--azul-primario);
+}
+
+.btn-login {
+    border: 2px solid var(--azul-primario);
+    padding: 8px 15px;
+    border-radius: 4px;
+    color: var(--azul-primario) !important;
+}
+
+.btn-login:hover {
+    background-color: var(--azul-primario);
+    color: var(--branco) !important;
+}
+
+/* =========================================
+   HERO SECTION (Degradê)
+   ========================================= */
+.hero {
+    /* Múltiplos fundos: O gradiente semi-transparente vem primeiro, depois a imagem */
+    background-image: 
+        linear-gradient(
+            rgba(10, 25, 47, 0.85), /* --azul-escuro com 85% de opacidade */
+            rgba(0, 68, 136, 0.85)  /* --azul-primario com 85% de opacidade */
+        ),
+        url('../img/estudantes.webp'); /* Imagem de fundo */
+    
+    /* Configurações de posicionamento da imagem */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    color: var(--branco);
+    padding: 120px 5%; /* Aumentei um pouco o padding para dar mais respiro à imagem */
+    text-align: center;
+    position: relative; /* Prepara o terreno caso queiramos adicionar elementos flutuantes depois */
+}
+
+.hero h1 {
+    font-size: 4rem; /* Um pouco maior para destacar sobre a foto */
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5); /* Sombra para garantir leitura perfeita */
+}
+
+.slogan {
+    font-size: 1.2rem;
+    font-style: italic;
+    opacity: 0.9;
+    margin-bottom: 20px;
+}
+
+.sub-slogan {
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 30px auto;
+}
+
+.btn-primario {
+    display: inline-block;
+    background-color: var(--branco);
+    color: var(--azul-primario);
+    padding: 12px 25px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primario:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* =========================================
+   SOBRE (Problema/Solução)
+   ========================================= */
+.contexto {
+    display: flex;
+    gap: 60px; /* Espaçamento igual e generoso entre as duas colunas */
+    padding: 80px 5%;
+    background-color: var(--branco);
+    max-width: 1200px; /* Limita a largura máxima para não esticar demais em monitores grandes */
+    margin: 0 auto; /* Centraliza a seção inteira no meio da tela */
+}
+
+.bloco-texto {
+    flex: 1; /* Força as duas colunas a terem exatamente 50% do espaço cada */
+}
+
+.bloco-texto h2 {
+    color: var(--azul-primario);
+    margin-bottom: 20px;
+    text-align: center; /* Mantém os subtítulos centralizados na coluna */
+}
+
+.bloco-texto p {
+    text-align: justify; /* Deixa o texto com alinhamento reto nas duas bordas (Justificado) */
+    margin-bottom: 15px;
+    color: var(--texto-escuro);
+    line-height: 1.7; /* Melhora a leitura do texto justificado */
+}
+
+/* Centralizando e ajustando a seção de oportunidades para casar com o novo layout */
+.secao-resultados {
+    padding: 60px 5%;
+    background-color: var(--cinza-fundo);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+/* =========================================
+   MOTOR DE ELEGIBILIDADE E FORMULÁRIO
+   ========================================= */
+.secao-motor {
+    padding: 60px 5%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container-motor {
+    background-color: var(--branco);
+    border-top: 5px solid var(--azul-primario);
+    border-radius: 8px;
+    padding: 30px;
+    width: 100%;
+    max-width: 700px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    margin-bottom: 40px;
+}
+
+.form-linha {
+    display: flex;
+    gap: 20px;
+}
+
+.form-group {
+    flex: 1;
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.btn-full {
+    width: 100%;
+    background-color: var(--azul-primario);
+    color: var(--branco);
+    font-size: 1rem;
+    margin-top: 10px;
+}
+
+.btn-full:hover {
+    background-color: var(--azul-escuro);
+}
+
+/* =========================================
+   GRID DE CARDS (Oportunidades)
+   ========================================= */
+.container-resultados {
+    width: 100%;
+    max-width: 1000px;
+}
+
+.titulo-resultados {
+    text-align: center;
+    color: var(--azul-escuro);
+    margin-bottom: 30px;
+}
+
+.estado-vazio {
+    text-align: center;
+    color: var(--texto-mutado);
+    font-style: italic;
+    grid-column: 1 / -1;
+}
+
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.card-vaga {
+    background-color: var(--branco);
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: transform 0.2s;
+}
+
+.card-vaga:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+.tag-probabilidade {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--branco);
+    margin-bottom: 15px;
+}
+
+.tag-alta { background-color: var(--tag-alta); }
+.tag-media { background-color: var(--tag-media); color: var(--texto-escuro); }
+.tag-baixa { background-color: var(--tag-baixa); }
+
+/* =========================================
+   FOOTER
+   ========================================= */
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--azul-escuro);
+    color: var(--branco);
+    font-size: 0.9rem;
+}

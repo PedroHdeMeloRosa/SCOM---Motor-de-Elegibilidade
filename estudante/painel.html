@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNILEGI - Painel do Estudante</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/img/logo-unilegi.svg">
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <style>
+        /* Ajuste simples para o painel */
+        .painel-container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
+        .cabecalho-painel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--azul-claro); padding-bottom: 10px; }
+        .btn-sair { background: none; border: 2px solid #dc3545; color: #dc3545; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-sair:hover { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar do Painel Interno -->
+    <header class="navbar">
+        <div class="logo">
+            <img src="../assets/img/logo-unilegi.svg" alt="Logo UNILEGI" class="logo-img">
+            <span>UNILEGI | Estudante</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#">Minha Ficha</a></li>
+                <li><a href="#">Oportunidades Salvas</a></li>
+                <!-- Botão que aciona o Logout -->
+                <li><button onclick="fazerLogout()" class="btn-sair">Sair</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="painel-container">
+        <div class="cabecalho-painel">
+            <h2>Bem-vindo, Estudante</h2>
+            <p>Complete sua ficha para que o Motor de Regras calcule suas chances.</p>
+        </div>
+        
+        <!-- O formulário socioeconômico completo virá aqui depois -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <p>Área reservada para a Ficha Socioeconômica.</p>
+        </div>
+    </main>
+
+    <script>
+        // Função assíncrona para destruir a sessão e voltar ao Lobby (index.html)
+        async function fazerLogout() {
+            try {
+                await fetch('../api/controllers/logout.php', { method: 'POST' });
+                // Redireciona de volta para a raiz do site
+                window.location.href = '../index.html';
+            } catch (error) {
+                console.error("Erro ao tentar deslogar:", error);
+                // Força o redirecionamento mesmo se der erro de rede
+                window.location.href = '../index.html';
+            }
+        }
+    </script>
+</body>
+</html>
