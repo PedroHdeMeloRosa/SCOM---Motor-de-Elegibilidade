@@ -3,40 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNILEGI - Dashboard Administrativo</title>
-    <link rel="icon" type="image/svg+xml" href="../assets/img/logo-unilegi.svg">
+    <title>UNILEGI - Diretoria</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/img/UNIELEGI LOGO 2026.svg">
     <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
-        .admin-navbar { background-color: var(--azul-escuro); color: white; }
+        .admin-navbar { background-color: var(--azul-escuro); color: white; border-bottom: 3px solid #dc3545; }
         .admin-navbar .logo, .admin-navbar a { color: white; }
         .painel-container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; }
         .btn-sair-admin { background: transparent; border: 1px solid white; color: white; padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: 0.3s; }
         .btn-sair-admin:hover { background: #dc3545; border-color: #dc3545; }
+        .badge-diretor { background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; vertical-align: middle; margin-left: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- Navbar Administrativa (Cor mais escura para diferenciar) -->
     <header class="navbar admin-navbar">
         <div class="logo">
-            <img src="../assets/img/UNIELEGI LOGO 2026.svg" alt="Logo UNILEGI" class="logo-img" style="filter: brightness(0) invert(1);">
-            <span>UNILEGI | DIRETORIA</span>
+            <img src="../assets/img/UNIELEGI LOGO 2026.svg" alt="Logo UNILEGI" class="logo-img" style="filter: brightness(0) invert(1); height: 40px;">
+            <span>UNILEGI <span class="badge-diretor">DIRETOR</span></span>
         </div>
         <nav>
             <ul>
                 <li><a href="#">Gestão de Editais</a></li>
-                <li><a href="#">Usuários</a></li>
+                <li><a href="#">Controle de Usuários (Banimentos)</a></li>
+                <li><a href="#">Auditoria de Comentários</a></li>
                 <li><button onclick="fazerLogout()" class="btn-sair-admin">Sair do Painel</button></li>
             </ul>
         </nav>
     </header>
 
     <main class="painel-container">
-        <h2>Painel de Controle</h2>
+        <h2>Painel de Controle Absoluto</h2>
         <hr style="border: 0; height: 1px; background: #ccc; margin: 20px 0;">
-        
-        <p>Bem-vindo à área de administração do Motor de Elegibilidade.</p>
-        <!-- Áreas de cadastro de edital, aprovação de comentários e banimentos virão aqui -->
+        <p>Bem-vindo, Diretor. Você possui permissão total sobre o sistema, editais e contas de usuários.</p>
     </main>
 
     <script>
@@ -45,7 +44,6 @@
                 await fetch('../api/controllers/logout.php', { method: 'POST' });
                 window.location.href = '../index.html';
             } catch (error) {
-                console.error("Erro ao sair:", error);
                 window.location.href = '../index.html';
             }
         }

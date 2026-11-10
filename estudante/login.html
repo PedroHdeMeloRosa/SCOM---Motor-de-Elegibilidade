@@ -126,10 +126,13 @@
                 const resultado = await response.json();
 
                 if (response.ok && resultado.sucesso) {
-                    // RBAC: Redirecionamento 3 Tiers
-                    if (resultado.perfil === 'DIRETOR' || resultado.perfil === 'COORDENADOR') {
-                        // Ambos vão para a área administrativa, mas o PHP definirá lá dentro o que cada um vê
-                        window.location.href = '../editor/dashboard.html';
+                    // RBAC: Redirecionamento 3 Tiers isolado
+                    if (resultado.perfil === 'DIRETOR') {
+                        // Diretor tem acesso absoluto
+                        window.location.href = '../editor/dashboard_diretor.html';
+                    } else if (resultado.perfil === 'COORDENADOR') {
+                        // Coordenador gerencia apenas editais
+                        window.location.href = '../editor/dashboard_coordenador.html';
                     } else {
                         // Estudante vai para o painel do aluno
                         window.location.href = 'painel.html';

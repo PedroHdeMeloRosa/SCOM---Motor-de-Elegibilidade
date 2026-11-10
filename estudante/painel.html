@@ -1,62 +1,312 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UNILEGI - Painel do Estudante</title>
-    <link rel="icon" type="image/svg+xml" href="../assets/img/logo-unilegi.svg">
+    <link rel="icon" type="image/svg+xml" href="../assets/img/UNIELEGI LOGO 2026.svg">
+
+    <!-- CSS Global e CSS do Painel -->
     <link rel="stylesheet" href="../assets/css/styles.css">
-    <style>
-        /* Ajuste simples para o painel */
-        .painel-container { padding: 40px 5%; max-width: 1000px; margin: 0 auto; }
-        .cabecalho-painel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--azul-claro); padding-bottom: 10px; }
-        .btn-sair { background: none; border: 2px solid #dc3545; color: #dc3545; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-sair:hover { background: #dc3545; color: white; }
-    </style>
+    <link rel="stylesheet" href="../assets/css/painel.css">
+
+    <!-- Leaflet CSS (Mapa Interativo) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Bibliotecas JS: Chart.js e Leaflet -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+
+    <!-- Script Controlador do Painel -->
+    <script src="../assets/js/painel_estudante.js" defer></script>
 </head>
+
 <body>
 
-    <!-- Navbar do Painel Interno -->
+    <!-- Navbar Superior -->
     <header class="navbar">
         <div class="logo">
-            <img src="../assets/img/logo-unilegi.svg" alt="Logo UNILEGI" class="logo-img">
+            <img src="../assets/img/UNIELEGI LOGO 2026.svg" alt="Logo UNILEGI" class="logo-img" style="height: 45px;">
             <span>UNILEGI | Estudante</span>
         </div>
         <nav>
             <ul>
-                <li><a href="#">Minha Ficha</a></li>
-                <li><a href="#">Oportunidades Salvas</a></li>
-                <!-- Botão que aciona o Logout -->
-                <li><button onclick="fazerLogout()" class="btn-sair">Sair</button></li>
+                <li><a href="#" onclick="trocarAba('aba-dashboard')">Visão Geral & Mapa</a></li>
+                <li><a href="#" onclick="trocarAba('aba-historico')">Histórico & Filtros</a></li>
+                <li><a href="#" onclick="trocarAba('aba-ficha')">Minha Ficha Socioeconômica</a></li>
+                <li><button onclick="fazerLogout()" class="btn-primario"
+                        style="background:#dc3545; color:white; padding: 6px 15px;">Sair</button></li>
             </ul>
         </nav>
     </header>
 
-    <main class="painel-container">
-        <div class="cabecalho-painel">
-            <h2>Bem-vindo, Estudante</h2>
-            <p>Complete sua ficha para que o Motor de Regras calcule suas chances.</p>
+    <main class="painel-wrapper">
+
+        <!-- Botões de Alternância Rápida -->
+        <div class="abas-navegacao">
+            <button class="aba-btn ativa" id="btn-aba-dashboard" onclick="trocarAba('aba-dashboard')">📊 Dashboard &
+                Mapa de Rotas</button>
+            <button class="aba-btn" id="btn-aba-historico" onclick="trocarAba('aba-historico')">🔎 Histórico Completo &
+                Filtros</button>
+            <button class="aba-btn" id="btn-aba-ficha" onclick="trocarAba('aba-ficha')">📝 Preencher Ficha
+                Socioeconômica</button>
         </div>
-        
-        <!-- O formulário socioeconômico completo virá aqui depois -->
-        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <p>Área reservada para a Ficha Socioeconômica.</p>
-        </div>
+
+        <!-- =================================================================
+             ABA 1: DASHBOARD INTERATIVO + MAPA + 8 OPORTUNIDADES PROMISSORAS
+             ================================================================= -->
+        <section id="aba-dashboard" class="secao-aba ativa">
+
+            <!-- PRIMEIRA CAIXA: Resumo do Aluno, Gráficos e Mapa -->
+            <div class="caixa-dashboard">
+                <div class="topo-boas-vindas">
+                    <div>
+                        <h2 id="nome-estudante">Olá, Estudante!</h2>
+                        <p>Aqui está o cruzamento atualizado do seu perfil com os editais abertos.</p>
+                    </div>
+                    <span class="badge-localizacao" id="badge-origem">📍 Origem: Sorocaba - SP (Raio 2km)</span>
+                </div>
+
+                <!-- Indicadores Numéricos (KPIs) -->
+                <div class="kpis-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-titulo">Universidades Mapeadas</div>
+                        <div class="kpi-valor" id="kpi-universidades">0</div>
+                    </div>
+                    <div class="kpi-card verde">
+                        <div class="kpi-titulo">Alta Chance (Verdes)</div>
+                        <div class="kpi-valor" id="kpi-verdes">0</div>
+                    </div>
+                    <div class="kpi-card amarelo">
+                        <div class="kpi-titulo">Média / Atenção (Amarelas)</div>
+                        <div class="kpi-valor" id="kpi-amarelas">0</div>
+                    </div>
+                    <div class="kpi-card vermelho">
+                        <div class="kpi-titulo">Improváveis (Vermelhas)</div>
+                        <div class="kpi-valor" id="kpi-vermelhas">0</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos Lado a Lado -->
+                <div class="graficos-grid">
+                    <div class="grafico-box">
+                        <h3>Distribuição por Probabilidade de Aprovação</h3>
+                        <div class="canvas-container">
+                            <canvas id="graficoPizza"></canvas>
+                        </div>
+                    </div>
+                    <div class="grafico-box">
+                        <h3>Distinção de Vagas por Modalidade e Escopo</h3>
+                        <div class="canvas-container">
+                            <canvas id="graficoBarras"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mapa Interativo com Arcos e Raio de 2km -->
+                <div class="mapa-section">
+                    <div class="mapa-header">
+                        <strong>🗺️ Radar Geográfico de Oportunidades (Raio de Precisão: 2 km)</strong>
+                        <div class="legenda-mapa">
+                            <span class="legenda-item"><i class="ponto-cor" style="background:#004488;"></i> Sua
+                                Residência</span>
+                            <span class="legenda-item"><i class="ponto-cor" style="background:#28a745;"></i> Alta
+                                Compatibilidade</span>
+                            <span class="legenda-item"><i class="ponto-cor" style="background:#ffc107;"></i> Atenção
+                                (Média)</span>
+                            <span class="legenda-item"><i class="ponto-cor" style="background:#dc3545;"></i>
+                                Improvável</span>
+                        </div>
+                    </div>
+                    <div id="mapa-brasil"></div>
+                </div>
+            </div>
+
+            <!-- SEGUNDO CORPO: As 8 Fichas Mais Recentes e Promissoras -->
+            <div class="secao-cards-recentes">
+                <div class="cabecalho-secao">
+                    <div>
+                        <h2 style="color: var(--azul-escuro);">As 8 Oportunidades Mais Promissoras</h2>
+                        <p style="color: var(--texto-mutado); font-size: 0.95rem;">Ordenadas automaticamente pela maior
+                            compatibilidade com a sua ficha e custo de estadia.</p>
+                    </div>
+                    <button class="btn-primario" onclick="trocarAba('aba-historico')"
+                        style="background: var(--azul-claro); color: var(--azul-primario);">Ver Todos os Editais
+                        →</button>
+                </div>
+
+                <div id="grid-top-8" class="grid-cards">
+                    <!-- Injetado dinamicamente via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             ABA 2: HISTÓRICO COMPLETO COM FILTROS AVANÇADOS
+             ================================================================= -->
+        <section id="aba-historico" class="secao-aba">
+            <div class="secao-cards-recentes">
+                <h2 style="color: var(--azul-escuro); margin-bottom: 15px;">Histórico Completo de Editais e Filtros</h2>
+
+                <!-- NOVO: Mapa Exclusivo do Histórico (Auto-Fit) -->
+                <div id="mapa-container-historico" class="mapa-section" style="margin-bottom: 25px;">
+                    <div class="mapa-header" style="background-color: var(--azul-primario);">
+                        <strong>🗺️ Inspetor de Rota Detalhada</strong>
+                        <span style="font-size: 0.85rem;">Clique em "Ver Rota" em qualquer edital abaixo para focar no
+                            trajeto.</span>
+                    </div>
+                    <div id="mapa-brasil-historico" style="width: 100%; height: 350px; background-color: #eef5fc;">
+                    </div>
+                </div>
+
+                <div class="barra-filtros">
+                    <div>
+                        <label for="filtro-chance">Probabilidade</label>
+                        <select id="filtro-chance" onchange="aplicarFiltrosHistorico()">
+                            <option value="TODAS">Todas as Chances</option>
+                            <option value="ALTA">🟢 Alta Compatibilidade</option>
+                            <option value="MEDIA">🟡 Média / Atenção</option>
+                            <option value="BAIXA">🔴 Improvável</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filtro-escopo">Alcance / Região</label>
+                        <select id="filtro-escopo" onchange="aplicarFiltrosHistorico()">
+                            <option value="TODOS">Qualquer Distância</option>
+                            <option value="LOCAL">Mesma Cidade (Local)</option>
+                            <option value="ESTADUAL">Dentro do Estado (Estadual)</option>
+                            <option value="INTERESTADUAL">Outro Estado (Interestadual)</option>
+                            <option value="INTERNACIONAL">Internacional</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filtro-prazo">Prazo Limite Até</label>
+                        <input type="date" id="filtro-prazo" onchange="aplicarFiltrosHistorico()">
+                    </div>
+                    <div>
+                        <label for="filtro-orcamento">Custo Máx. República (R$)</label>
+                        <input type="number" id="filtro-orcamento" placeholder="Ex: 900"
+                            oninput="aplicarFiltrosHistorico()">
+                    </div>
+                </div>
+
+                <div id="grid-historico-completo" class="grid-cards">
+                    <!-- Injetado dinamicamente via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             ABA 3: FICHA SOCIOECONÔMICA E DE MOBILIDADE COMPLETA
+             ================================================================= -->
+        <section id="aba-ficha" class="secao-aba">
+            <div class="caixa-dashboard" style="max-width: 850px; margin: 0 auto;">
+                <h2 style="color: var(--azul-escuro);">Ficha Socioeconômica, Acadêmica e de Mobilidade</h2>
+                <p style="color: var(--texto-mutado); margin-bottom: 20px;">Estes dados alimentam o Motor de Regras para
+                    calcular suas cotas, isenções e viabilidade financeira de moradia em outras cidades.</p>
+
+                <div id="alerta-ficha"
+                    style="display:none; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold;">
+                </div>
+
+                <form id="form-ficha-completa">
+
+                    <h3 class="form-secao-titulo">1. Perfil Socioeconômico e Escolar</h3>
+                    <div class="form-linha">
+                        <div class="form-group">
+                            <label for="renda_per_capita">Renda Familiar Per Capita (R$)</label>
+                            <input type="number" id="renda_per_capita" name="renda_per_capita" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tipo_escola">Ensino Médio Cursado em:</label>
+                            <select id="tipo_escola" name="tipo_escola" required>
+                                <option value="PUBLICA">Integralmente em Escola Pública</option>
+                                <option value="PRIVADA_BOLSA">Escola Privada (Com Bolsa Integral)</option>
+                                <option value="PRIVADA">Escola Privada (Sem Bolsa)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-linha">
+                        <div class="form-group">
+                            <label for="etnia">Autodeclaração Étnico-Racial</label>
+                            <select id="etnia" name="etnia">
+                                <option value="NAO_DECLARADO">Prefiro não declarar / Ampla</option>
+                                <option value="PPI">Preto, Pardo ou Indígena (PPI)</option>
+                                <option value="BRANCO">Branco</option>
+                                <option value="AMARELO">Amarelo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="nota_media_enem">Média Estimada no ENEM / Vestibular (400 a 1000)</label>
+                            <input type="number" id="nota_media_enem" name="nota_media_enem" min="400" max="1000"
+                                required>
+                        </div>
+                    </div>
+
+                    <h3 class="form-secao-titulo">2. Geografia e Disposição de Mudança</h3>
+                    <div class="form-linha">
+                        <div class="form-group">
+                            <label for="cep">Seu CEP Atual</label>
+                            <input type="text" id="cep" name="cep" placeholder="18013-004" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cidade_origem">Cidade Atual (Ponto de Partida no Mapa)</label>
+                            <select id="cidade_origem" name="cidade_origem" required>
+                                <option value="Sorocaba">Sorocaba - SP</option>
+                                <option value="São Paulo">São Paulo - SP</option>
+                                <option value="Campinas">Campinas - SP</option>
+                                <option value="Bauru">Bauru - SP</option>
+                                <option value="Curitiba">Curitiba - PR</option>
+                                <option value="Belo Horizonte">Belo Horizonte - MG</option>
+                                <option value="Rio de Janeiro">Rio de Janeiro - RJ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-linha">
+                        <div class="form-group">
+                            <label for="nivel_mobilidade">Até que nível você estaria disposto a se mudar?</label>
+                            <select id="nivel_mobilidade" name="nivel_mobilidade" required>
+                                <option value="LOCAL">Não posso me mudar (Apenas minha cidade/região)</option>
+                                <option value="ESTADUAL">Dentro do meu Estado (Estadual)</option>
+                                <option value="INTERESTADUAL">Qualquer Estado do Brasil (Interestadual)</option>
+                                <option value="INTERNACIONAL">Aceito oportunidades no Exterior (Internacional)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="orcamento_moradia">Orçamento Mensal Máximo para Moradia/República (R$)</label>
+                            <input type="number" id="orcamento_moradia" name="orcamento_moradia" step="50" required
+                                placeholder="Ex: 800.00">
+                        </div>
+                    </div>
+
+                    <h3 class="form-secao-titulo">3. Condições Específicas e Permanência Estudantil</h3>
+                    <div class="checkbox-grupo">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="interesse_republica" name="interesse_republica">
+                            Tenho interesse em morar em Repúblicas Estudantis
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="precisa_auxilio_moradia" name="precisa_auxilio_moradia">
+                            Dependo obrigatoriamente de Auxílio Moradia / Alojamento Gratuito
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="pcd" name="pcd">
+                            Sou Pessoa com Deficiência (PcD)
+                        </label>
+                    </div>
+
+                    <button type="submit" id="btn-salvar-ficha" class="btn-primario btn-full" style="margin-top: 25px;">
+                        Salvar Ficha e Recalcular Rotas e Oportunidades
+                    </button>
+                </form>
+            </div>
+        </section>
+
     </main>
 
-    <script>
-        // Função assíncrona para destruir a sessão e voltar ao Lobby (index.html)
-        async function fazerLogout() {
-            try {
-                await fetch('../api/controllers/logout.php', { method: 'POST' });
-                // Redireciona de volta para a raiz do site
-                window.location.href = '../index.html';
-            } catch (error) {
-                console.error("Erro ao tentar deslogar:", error);
-                // Força o redirecionamento mesmo se der erro de rede
-                window.location.href = '../index.html';
-            }
-        }
-    </script>
 </body>
+
 </html>
