@@ -151,10 +151,21 @@ function inicializarMapaHistorico() {
 }
 
 // Focar rota exclusiva
+// Focar rota exclusiva
 function focarRotaHistorico(id_edital) {
-    const op = todasOportunidades.find(o => o.id_edital === id_edital);
-    if (!op) return;
+    // 1. Correção: Usando == em vez de === para evitar falhas de tipagem (String vs Number)
+    const op = todasOportunidades.find(o => o.id_edital == id_edital);
+    
+    if (!op) {
+        console.error("Vaga não encontrada para o ID:", id_edital);
+        return;
+    }
 
+    // 2. Trava de segurança: Garante que o mapa existe antes de limpar
+    if (!camadaHistorico) {
+        inicializarMapaHistorico();
+    }
+    
     camadaHistorico.clearLayers();
 
     const latOrigem = parseFloat(dadosPerfil.lat_origem);
