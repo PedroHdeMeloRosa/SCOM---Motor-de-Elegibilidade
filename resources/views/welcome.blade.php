@@ -7,7 +7,7 @@
     <title>UNIELEGI - Motor de Elegibilidade</title>
     
     <!-- Novo Favicon adicionado aqui -->
-    <link rel="icon" type="image/svg+xml" href="assets/img/UNIELEGI logo.jpg">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('assets/img/UNIELEGI logo.jpg') }}">
     
     <link rel="stylesheet" href="assets/css/styles.css">
     <script src="assets/js/engine.js" defer></script>
@@ -21,7 +21,7 @@
     <header class="navbar">
         <!-- Logo atualizada com imagem e texto -->
         <div class="logo">
-            <img src="assets/img/UNIELEGI LOGO 2026.svg" alt="Logo UNIELEGI" class="logo-img">
+            <img src="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}" alt="Logo UNIELEGI" class="logo-img">
             <span>UNILEGI</span>
         </div>
         <nav>
