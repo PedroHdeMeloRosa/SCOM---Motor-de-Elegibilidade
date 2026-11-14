@@ -1,3 +1,15 @@
+### 🚀 Atualização em Branch (14/11/2026): Motor Geográfico e Socioeconômico (Painel do Estudante)
+
+Nesta última iteração, o Painel do Estudante foi transformado numa verdadeira ferramenta analítica e geoespacial. As seguintes funcionalidades foram implementadas na *branch* atual:
+
+* **Radar Geográfico e UX de Mapa:** Integração profunda com `Leaflet.js`, trazendo um mapa do Brasil com modo "Tela Cheia", auto-ajuste inteligente de câmera (Zoom) e um "Pulso Magnético" animado na cidade de origem.
+* **Sistema de Destaque Isolado:** Ao clicar em uma rota, o sistema aplica um filtro *grayscale* (desfoque) em todas as outras rotas irrelevantes, focando a câmera na conexão exata entre a casa do aluno e a universidade escolhida.
+* **Motor Socioeconômico Bifurcado (PNAES):** O backend (Laravel) agora diferencia classes sociais. Aplica o corte legal rigoroso de 1,5 salário mínimo para vagas de assistência (Moradia/Alimentação), mas permite que alunos de alta renda vejam as vagas como "Viáveis" caso declarem autossuficiência financeira, não os bloqueando do sistema.
+* **Geocodificação Bidirecional:** O formulário sincroniza CEP, Estado e Cidade em tempo real cruzando três APIs públicas (IBGE, ViaCEP e Nominatim/OpenStreetMap), garantindo sempre coordenadas (Lat/Lng) perfeitas para o motor de distâncias.
+* **Calendário Inteligente (Flatpickr):** Substituição do input de data padrão por um calendário interativo que marca visualmente os dias que possuem editais encerrando.
+* **Histórico Categorizado:** A lista de editais agora é dividida em blocos visuais de prioridade (Alta, Média, Baixa, Expirado), sempre ordenando do edital mais urgente (data mais próxima) para o mais distante.
+* **Fábrica de Testes de Stress:** Implementação do `EditaisMassivosSeeder`, capaz de injetar dezenas de editais futuros e passados para testar o comportamento visual e de performance do sistema.
+
 # CHANGELOG - SCOM Motor de Elegibilidade
 
 Este documento regista as modificações estruturais, implementações e decisões arquiteturais do projeto.

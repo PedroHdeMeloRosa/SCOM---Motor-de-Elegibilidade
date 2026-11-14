@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UNIELEGI - Motor de Elegibilidade</title>
     
-    <!-- Novo Favicon adicionado aqui -->
-    <link rel="icon" type="image/svg+xml" href="assets/img/UNIELEGI logo.jpg">
+    <!-- Favicon com o tipo corrigido para imagem jpeg e usando asset() -->
+    <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/UNIELEGI logo.jpg') }}">
     
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <script src="assets/js/engine.js" defer></script>
+    <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
+    <script src="{{ asset('assets/js/engine.js') }}" defer></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -19,9 +19,8 @@
 
     <!-- Barra de Navegação -->
     <header class="navbar">
-        <!-- Logo atualizada com imagem e texto -->
         <div class="logo">
-            <img src="assets/img/UNIELEGI LOGO 2026.svg" alt="Logo UNIELEGI" class="logo-img">
+            <img src="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}" alt="Logo UNIELEGI" class="logo-img">
             <span>UNILEGI</span>
         </div>
         <nav>
@@ -29,19 +28,21 @@
                 <li><a href="#inicio">Início</a></li>
                 <li><a href="#sobre">Sobre o Projeto</a></li>
                 <li><a href="#oportunidades">Oportunidades</a></li>
-                <li><a href="estudante/login.html" class="btn-primario" style="padding: 8px 15px;">Entrar</a></li>
+                <!-- Conectado à rota do painel recém-criada -->
+                <li><a href="{{ route('login') }}" class="btn-primario" style="padding: 8px 15px;">Entrar</a></li>
             </ul>
         </nav>
     </header>
 
-    <!-- Hero Section (Boas-vindas) -->
-    <section id="inicio" class="hero">
+    <!-- Hero Section (Boas-vindas) com Imagem Mesclada no Degradê -->
+    <section id="inicio" class="hero" style="background: linear-gradient(rgba(0, 68, 136, 0.85), rgba(10, 25, 47, 0.95)), url({{ asset('assets/img/estudantes.webp') }}); background-size: cover; background-position: center; background-repeat: no-repeat;">
+        
         <div class="hero-content">
             <h1>UNILEGI</h1>
             <p class="slogan">Mentoria e integração universitária de confiança há 0 anos.</p>
             <p class="sub-slogan">Descubra cotas, isenções e oportunidades de forma simples, direta e sem burocracia.</p>
-            <!-- Botão redirecionado direto para o login já que a seção intermediária foi removida -->
-            <a href="estudante/login.html" class="btn-primario">Descubra Suas Chances</a>
+            
+            <a href="{{ route('login') }}" class="btn-primario">Descubra Suas Chances</a>
         </div>
     </section>
 
@@ -57,7 +58,7 @@
             <p>A UNILEGI nasceu para ser a sua bússola. Diferente das soluções existentes, nós não somos apenas um calendário ou buscador de notícias. Construímos um sistema inteligente que cruza o perfil socioeconômico com os critérios de cada universidade.</p>
             <p>Em vez de entregar PDFs de 50 páginas, nós entregamos um plano de ação claro, dedicado <b>especialmente para você</b>.
 
-            Clique em <b>"Descubra Suas Chances"</B> no topo da página e veja quais oportunidades você pode acessar hoje mesmo.
+            Clique em <b>"Descubra Suas Chances"</b> no topo da página e veja quais oportunidades você pode acessar hoje mesmo.
             </p>
         </div>
     </section>
@@ -71,13 +72,12 @@
                 <div class="estado-vazio">
                     <p>Faça login e preencha sua ficha para destravar as vagas compatíveis com o seu perfil.</p>
                     <br>
-                    <a href="estudante/login.html" class="btn-primario">Acessar Sistema</a>
+                    <a href="{{ route('login') }}" class="btn-primario">Acessar Sistema</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Rodapé com a dedicatória integrada -->
     <footer>
         <p>UNILEGI © 2026. Desenvolvido para a disciplina de SCOM por Pedro H. Rosa e Roberta R. Pompeu.</p>
     </footer>

@@ -1,14 +1,12 @@
-/* =========================================================
-   ESTILOS EXCLUSIVOS DO PAINEL DO ESTUDANTE (painel.css)
-   ========================================================= */
-
+/* ==========================================================================
+   1. ESTRUTURA GERAL DO PAINEL E ABAS
+   ========================================================================== */
 .painel-wrapper {
     max-width: 1280px;
     margin: 30px auto;
     padding: 0 4%;
 }
 
-/* Navegação interna por abas (SPA) */
 .abas-navegacao {
     display: flex;
     gap: 12px;
@@ -26,10 +24,11 @@
     border-radius: 6px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: 0.2s;
 }
 
-.aba-btn.ativa, .aba-btn:hover {
+.aba-btn.ativa,
+.aba-btn:hover {
     background-color: var(--azul-primario);
     color: var(--branco);
     border-color: var(--azul-primario);
@@ -38,7 +37,7 @@
 
 .secao-aba {
     display: none;
-    animation: fadeIn 0.3s ease;
+    animation: 0.3s fadeIn;
 }
 
 .secao-aba.ativa {
@@ -50,9 +49,9 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* =========================================================
-   CAIXA 1: DASHBOARD EXECUTIVO (KPIs + GRÁFICOS + MAPA)
-   ========================================================= */
+/* ==========================================================================
+   2. DASHBOARD: CAIXAS, KPIS E GRÁFICOS
+   ========================================================================== */
 .caixa-dashboard {
     background-color: var(--branco);
     border-top: 5px solid var(--azul-primario);
@@ -87,7 +86,6 @@
     font-size: 0.9rem;
 }
 
-/* Linha de Indicadores Rápidos (KPIs) */
 .kpis-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -121,7 +119,6 @@
     margin-top: 4px;
 }
 
-/* Grid de Gráficos (Pizza à Esquerda + Barras à Direita) */
 .graficos-grid {
     display: grid;
     grid-template-columns: 1fr 1.4fr;
@@ -130,7 +127,7 @@
 }
 
 .grafico-box {
-    background: #ffffff;
+    background: #fff;
     border: 1px solid #e6eff8;
     border-radius: 8px;
     padding: 20px;
@@ -152,15 +149,15 @@
     position: relative;
 }
 
-/* =========================================================
-   MAPA INTERATIVO DO BRASIL (BRANCO E AZUL COM ARCOS)
-   ========================================================= */
+/* ==========================================================================
+   3. O MAPA E A LÓGICA DE GEOLOCALIZAÇÃO
+   ========================================================================== */
 .mapa-section {
     border: 2px solid var(--azul-primario);
     border-radius: 10px;
     overflow: hidden;
     position: relative;
-    background-color: #ffffff;
+    background-color: #fff;
 }
 
 .mapa-header {
@@ -199,26 +196,72 @@
     background-color: #eef5fc;
 }
 
-/* Filtro CSS no TileLayer para deixar o Mapa Branco com Bordas Azuis */
+/* Filtro do Tile do Leaflet para ficar com o tom de azul da aplicação */
 .leaflet-tile-pane {
     filter: grayscale(100%) contrast(108%) brightness(103%) sepia(35%) hue-rotate(175deg) saturate(220%);
 }
 
-/* Animação da linha em arco no mapa */
+/* Animação dos Arcos (Linhas de Conexão) */
 .arco-voo {
     stroke-dasharray: 8, 6;
-    animation: dashArco 20s linear infinite;
+    animation: 20s linear infinite dashArco;
 }
-
 @keyframes dashArco {
-    to {
-        stroke-dashoffset: -200;
-    }
+    to { stroke-dashoffset: -200; }
 }
 
-/* =========================================================
-   CAIXA 2: AS 8 FICHAS MAIS PROMISSORAS E FILTROS
-   ========================================================= */
+/* ==========================================================================
+   4. TELA CHEIA, DESFOQUE E RADAR (AS NOVIDADES)
+   ========================================================================== */
+/* Desfoque elegante para as rotas não selecionadas */
+.rota-fundo {
+    opacity: 0.15 !important;
+    filter: grayscale(80%);
+    transition: all 0.4s ease;
+}
+
+/* Classe dinâmica para maximizar o mapa (Google Maps Style) */
+.mapa-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* Botão Leaflet customizado para Tela Cheia */
+.btn-expandir-mapa {
+    background-color: white;
+    border: 2px solid rgba(0,0,0,0.2);
+    background-clip: padding-box;
+    cursor: pointer;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+}
+.btn-expandir-mapa:hover {
+    background-color: #f4f4f4;
+}
+
+/* Marcador visual da residência (Limpo e moderno) */
+.icone-origem-pulso {
+    background: #004488;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 68, 136, 0.5);
+}
+
+/* ==========================================================================
+   5. CARDS DE EDITAIS E HISTÓRICO
+   ========================================================================== */
 .secao-cards-recentes {
     background-color: var(--branco);
     border-radius: 10px;
@@ -229,8 +272,8 @@
 
 .cabecalho-secao {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 22px;
     flex-wrap: wrap;
     gap: 10px;
@@ -257,10 +300,22 @@
 .card-oportunidade-rico.borda-MEDIA { border-top-color: var(--tag-media); }
 .card-oportunidade-rico.borda-BAIXA { border-top-color: var(--tag-baixa); }
 
+/* Vagas Expiradas */
+.borda-EXPIRADO {
+    border-top-color: #6c757d !important;
+    opacity: 0.65;
+    background-color: #f8f9fa;
+}
+.tag-expirado {
+    background: #e2e3e5 !important;
+    color: #383d41 !important;
+    border: 1px solid #d6d8db;
+}
+
 .card-topo {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
+    justify-content: space-between;
     gap: 8px;
     margin-bottom: 10px;
 }
@@ -302,6 +357,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .link-edital {
@@ -310,12 +367,52 @@
     text-decoration: none;
     font-size: 0.9rem;
 }
-
 .link-edital:hover {
     text-decoration: underline;
 }
 
-/* Barra de Filtros do Histórico Completo */
+/* ==========================================================================
+   6. BOTÕES DO MAPA
+   ========================================================================== */
+.btn-foco-rota,
+.btn-toggle-rota {
+    background: 0 0;
+    border: 1px solid #ccc;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--texto-escuro);
+    transition: 0.2s;
+}
+.btn-foco-rota:hover,
+.btn-toggle-rota:hover {
+    background: var(--azul-claro);
+    border-color: var(--azul-primario);
+    color: var(--azul-primario);
+}
+
+.btn-destaque {
+    background: var(--azul-primario);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: 0.2s;
+}
+.btn-destaque.ativo {
+    background: #ffc107;
+    color: #000;
+    font-weight: 700;
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+}
+
+/* ==========================================================================
+   7. FORMULÁRIOS E FILTROS
+   ========================================================================== */
 .barra-filtros {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -326,18 +423,17 @@
     margin-bottom: 25px;
 }
 
-/* Formulário Socioeconômico Expandido */
 .form-secao-titulo {
     color: var(--azul-primario);
     border-bottom: 2px solid var(--azul-claro);
     padding-bottom: 8px;
-    margin: 25px 0 15px 0;
+    margin: 25px 0 15px;
     font-size: 1.1rem;
 }
 
 .checkbox-grupo {
     display: flex;
-     gap: 20px;
+    gap: 20px;
     margin-top: 10px;
     flex-wrap: wrap;
 }
@@ -346,51 +442,33 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: normal;
+    font-weight: 400;
     cursor: pointer;
 }
-
 .checkbox-label input {
     width: auto;
 }
 
+/* ==========================================================================
+   8. RESPONSIVIDADE
+   ========================================================================== */
 @media (max-width: 860px) {
     .graficos-grid {
         grid-template-columns: 1fr;
     }
 }
 
-/* Botões Interativos do Mapa nos Cards */
-.card-rodape {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+/* Customização Básica do Select (limitada pelo sistema operativo) */
+#filtro-chance {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%23333" d="M1 4l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
 }
 
-.btn-toggle-rota, .btn-foco-rota {
-    background: none;
-    border: 1px solid #ccc;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--texto-escuro);
-    transition: all 0.2s;
-}
-
-.btn-toggle-rota:hover, .btn-foco-rota:hover {
-    background: var(--azul-claro);
-    border-color: var(--azul-primario);
-    color: var(--azul-primario);
-}
-
-.rota-oculta {
-    opacity: 0.6;
-    background: #f0f0f0;
-}
+#filtro-chance option[value="ALTA"] { color: #28a745; font-weight: bold; }
+#filtro-chance option[value="MEDIA"] { color: #ffc107; font-weight: bold; }
+#filtro-chance option[value="BAIXA"] { color: #dc3545; font-weight: bold; }
