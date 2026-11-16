@@ -6,18 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('tipo_perfil')->default('ESTUDANTE');
-            $table->string('status_conta')->default('ATIVA');
-        });
+        // Só tenta adicionar as colunas se a tabela 'users' existir
+        if (Schema::hasTable('users')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('tipo_perfil')->default('ESTUDANTE');
+                $table->string('status_conta')->default('ATIVA');
+            });
+        }
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['tipo_perfil', 'status_conta']);
-        });
+        if (Schema::hasTable('users')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn(['tipo_perfil', 'status_conta']);
+            });
+        }
     }
 };

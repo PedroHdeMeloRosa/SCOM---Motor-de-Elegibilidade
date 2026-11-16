@@ -16,7 +16,6 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
-        /* Estilos exclusivos para centralizar o Login na tela inteira */
         body {
             display: flex;
             justify-content: center;
@@ -72,11 +71,13 @@
         .alerta-erro {
             color: #dc3545;
             background: #f8d7da;
+            border: 1px solid #f5c2c7;
             padding: 10px;
             border-radius: 4px;
             font-size: 0.9rem;
             margin-bottom: 15px;
-            display: block; /* Modificado para funcionar com o Blade */
+            display: block;
+            text-align: left;
         }
     </style>
 </head>
@@ -89,38 +90,59 @@
             <span>UNILEGI</span>
         </div>
 
-        <!-- O Laravel injetará erros de autenticação aqui automaticamente -->
         @if ($errors->any())
-            <div class="alerta-erro">
+            <div class="alerta-erro" role="alert">
                 {{ $errors->first() }}
             </div>
         @endif
 
-        <!-- O formulário apontará para a rota POST de login que criaremos -->
-        <form method="POST" action="{{ route('login') }}">
-            <!-- Token de Segurança Obrigatório do Laravel -->
+        <form method="POST" action="{{ route('login.autenticar') }}" id="form-login-laravel">
             @csrf
 
             <div class="form-group">
                 <label for="email">E-mail</label>
-                <!-- Mantém o email preenchido se a senha estiver errada -->
-                <input type="email" id="email" name="email" value="{{ old('email') }}" required placeholder="aluno@unesp.br">
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ old('email') }}"
+                    required
+                    maxlength="150"
+                    autocomplete="email"
+                    autofocus
+                    placeholder="aluno@unesp.br"
+                >
             </div>
 
             <div class="form-group">
                 <label for="password">Senha</label>
-                <!-- Laravel espera o campo 'password' em inglês por padrão -->
-                <input type="password" id="password" name="password" required placeholder="••••••••">
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    autocomplete="current-password"
+                    placeholder="••••••••"
+                >
             </div>
 
-            <button type="submit" class="btn-primario" style="width: 100%;">Acessar Plataforma</button>
+            <button type="submit" id="btn-entrar" class="btn-primario" style="width: 100%; background-color: var(--azul-primario); color: var(--branco);">
+                Acessar Plataforma
+            </button>
 
             <div class="links-uteis">
-                <a href="#">Criar conta</a>
+                <a href="{{ route('home') }}">← Voltar ao Início</a>
                 <a href="#">Esqueceu a senha?</a>
             </div>
         </form>
     </div>
 
+    <script>
+        document.getElementById('form-login-laravel').addEventListener('submit', function () {
+            const btn = document.getElementById('btn-entrar');
+            btn.textContent = 'Autenticando...';
+            btn.disabled = true;
+        });
+    </script>
 </body>
 </html>

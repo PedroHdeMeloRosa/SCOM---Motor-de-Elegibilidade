@@ -53,12 +53,3 @@ php artisan db:seed --class=EditaisSeeder
 - **Coordenador:** `coordenador@unilegi.com` | Senha: `scom2026`
 - **Diretor:** `diretor@unilegi.com` | Senha: `scom2026`
 
-## 🧪 Como Injetar Carga de Testes (30+ Editais)
-Para testar a performance do mapa, gráficos e vagas expiradas (cinzas), rode o semeador massivo:
-`php artisan db:seed --class=EditaisMassivosSeeder`
-
-## 🧹 Como Limpar os Dados "Falsos" e Restaurar
-Se os testes acabaram e você quiser apagar a bagunça para voltar apenas com os dados oficiais (4 editais reais e utilizadores):
-1. `php artisan migrate:fresh` (Destrói e recria tabelas vazias)
-2. `php artisan db:seed --class=UsuariosSeeder` (Restaura o seu Estudante Teste)
-3. `php artisan db:seed --class=EditaisSeeder` (Restaura os 4 editais oficiais)

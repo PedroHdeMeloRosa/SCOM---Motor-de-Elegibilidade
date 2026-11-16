@@ -1,32 +1,42 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PainelEstudanteController;
+use Illuminate\Support\Facades\Route;
 
+// Rota pública inicial
 Route::get('/', function () {
     return view('index');
+})->name('home');
+
+// Rotas de Autenticação
+Route::get('/login', [AuthController::class, 'exibirLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'autenticar'])->name('login.autenticar');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Rotas Exclusivas do Estudante (Protegidas por Sessão + RBAC)
+Route::middleware(['auth', 'perfil:ESTUDANTE'])->group(function () {
+    Route::get('/area-do-estudante', function () {
+        return view('estudante.painel');
+    })->name('estudante.painel');
+
+    Route::get('/api/estudante/painel', [PainelEstudanteController::class, 'obterDados'])
+        ->name('api.estudante.painel');
+
+    Route::post('/api/estudante/ficha', [PainelEstudanteController::class, 'salvarFicha'])
+        ->name('api.estudante.ficha');
 });
 
-Route::get('/area-do-estudante', function () {
-    return view('estudante.painel');
-})->name('estudante.painel');
+// Rotas Exclusivas da Coordenação (Protegidas por Sessão + RBAC)
+Route::middleware(['auth', 'perfil:COORDENADOR'])->group(function () {
+    Route::get('/coordenacao/dashboard', function () {
+        return view('editor.dashboard_coordenador');
+    })->name('coordenacao.dashboard');
+});
 
-Route::get('/login', function () {
-    return view('estudante.login');
-})->name('login');
-
-Route::post('/login', [AuthController::class, 'autenticar'])->name('login.autenticar');
-
-
-use App\Models\Edital;
-Route::get('/api/estudante/painel', [PainelEstudanteController::class, 'obterDados']);
-
-Route::post('/api/estudante/ficha', [PainelEstudanteController::class, 'salvarFicha']);
-
-Route::post('/logout', function (Illuminate\Http\Request $request) {
-    Illuminate\Support\Facades\Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return response()->json(['sucesso' => true]);
-})->name('logout');
+// Rotas Exclusivas da Diretoria (Protegidas por Sessão + RBAC)
+Route::middleware(['auth', 'perfil:DIRETOR'])->group(function () {
+    Route::get('/diretoria/dashboard', function () {
+        return view('editor.dashboard_diretor');
+    })->name('diretoria.dashboard');
+});

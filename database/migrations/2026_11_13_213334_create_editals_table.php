@@ -11,20 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('editais', function (Blueprint $table) {
-            $table->id();
-            $table->string('instituicao');
-            $table->string('titulo');
-            $table->string('cidade');
-            $table->string('estado', 2);
-            $table->decimal('latitude', 10, 7);
-            $table->decimal('longitude', 10, 7);
-            $table->date('prazo_limite');
-            $table->decimal('custo_moradia_estimado', 8, 2)->nullable();
-            $table->string('tipo_vaga'); // Ex: 'Moradia', 'Bolsa Permanência'
-            $table->string('escopo_geografico'); // Ex: 'LOCAL', 'ESTADUAL'
-            $table->timestamps();
-        });
+        // Trava de segurança: só cria se a tabela não existir no banco legado
+        if (!Schema::hasTable('editais')) {
+            Schema::create('editais', function (Blueprint $table) {
+                $table->id();
+                $table->string('instituicao');
+                $table->string('titulo');
+                $table->string('cidade');
+                $table->string('estado', 2);
+                $table->decimal('latitude', 10, 7);
+                $table->decimal('longitude', 10, 7);
+                $table->date('prazo_limite');
+                $table->decimal('custo_moradia_estimado', 8, 2)->nullable();
+                $table->string('tipo_vaga'); // Ex: 'Moradia', 'Bolsa Permanência'
+                $table->string('escopo_geografico'); // Ex: 'LOCAL', 'ESTADUAL'
+                $table->timestamps();
+            });
+        }
     }
 
     /**
@@ -32,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('editals');
+        Schema::dropIfExists('editais');
     }
 };
