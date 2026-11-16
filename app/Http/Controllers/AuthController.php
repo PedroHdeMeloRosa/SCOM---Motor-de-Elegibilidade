@@ -10,28 +10,44 @@ class AuthController extends Controller
     public function autenticar(Request $request)
     {
         $credenciais = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+            'email' => ['required', 'email', 'max:150'],
+            'password' => ['required', 'string'],
         ]);
 
-        if (Auth::attempt($credenciais)) {
-            $request->session()->regenerate();
-            
-            // Lógica RBAC (Role-Based Access Control)
-            $perfil = Auth::user()->tipo_perfil;
+        $autenticado = Auth::attempt([
+            'email' => $credenciais['email'],
+            'password' => $credenciais['password'],
+            'status_conta' => 'ATIVA',
+        ]);
 
-            if ($perfil === 'DIRETOR') {
-                return redirect()->intended('/diretoria/dashboard');
-            } elseif ($perfil === 'COORDENADOR') {
-                return redirect()->intended('/coordenacao/dashboard');
-            } else {
-                // Estudante vai para o painel do aluno
-                return redirect()->route('estudante.painel');
-            }
+        if (!$autenticado) {
+            return back()->withErrors([
+                'email' => 'As credenciais estão incorretas ou a conta não está autorizada.',
+            ])->onlyInput('email');
         }
 
-        return back()->withErrors([
-            'email' => 'As credenciais fornecidas estão incorretas ou a conta não existe.',
-        ])->onlyInput('email');
+        $request->session()->regenerate();
+
+        $usuario = Auth::user();
+
+        $destino = match ($usuario->tipo_perfil) {
+            'DIRETOR' => '/diretoria/dashboard',
+            'COORDENADOR' => '/coordenacao/dashboard',
+            'ESTUDANTE' => route('estudante.painel'),
+            default => null,
+        };
+
+        if ($destino === null) {
+            Auth::logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'email' => 'O perfil da conta não possui autorização válida.',
+            ])->onlyInput('email');
+        }
+
+        return redirect()->intended($destino);
     }
 }

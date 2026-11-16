@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,33 +13,53 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * Os atributos que podem ser preenchidos em massa (Mass Assignment).
+     * Tabela utilizada para autenticação.
+     */
+    protected $table = 'cadastros';
+
+    /**
+     * A tabela utiliza criado_em, não created_at e updated_at.
+     */
+    public $timestamps = false;
+
+    /**
+     * Atributos permitidos para preenchimento em massa.
      */
     protected $fillable = [
-        'name', 'email', 'password', 'tipo_perfil', 'status_conta',
-        'renda_per_capita', 'tipo_escola', 'etnia', 'nota_media_enem', 
-        'cep', 'cidade_origem', 'estado_origem', 'nivel_mobilidade', 
-        'orcamento_moradia', 'interesse_republica', 'precisa_auxilio_moradia', 'pcd'
+        'nome',
+        'email',
+        'senha_hash',
+        'tipo_perfil',
+        'status_conta',
     ];
 
     /**
-     * Os atributos que devem ficar ocultos (ex: ao retornar num JSON de API).
+     * Atributos ocultos em serializações.
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'senha_hash',
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Conversões de atributos.
      */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'criado_em' => 'datetime',
         ];
+    }
+
+    /**
+     * Informa ao Laravel o campo que armazena a senha.
+     */
+    public function getAuthPasswordName(): string
+    {
+        return 'senha_hash';
+    }
+
+    public function getAuthPassword(): string
+    {
+        return $this->senha_hash;
     }
 }
