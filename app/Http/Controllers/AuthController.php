@@ -99,6 +99,54 @@ class AuthController extends Controller
     }
 
     /**
+     * Exibe a tela de cadastro.
+     */
+    public function exibirCadastro()
+    {
+        if (Auth::check()) {
+            $destino = $this->obterRotaDestinoPorPerfil(Auth::user()->tipo_perfil);
+            if ($destino !== null) {
+                return redirect()->to($destino);
+            }
+        }
+
+        return view('estudante.cadastro');
+    }
+
+    /**
+     * Processa o registro de uma nova conta de estudante.
+     */
+    public function registrar(Request $request)
+    {
+        $dados = $request->validate([
+            'nome' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'string', 'email', 'max:150', 'unique:cadastros,email'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ], [
+            'nome.required' => 'O nome é obrigatório.',
+            'email.required' => 'O e-mail é obrigatório.',
+            'email.unique' => 'Este e-mail já está cadastrado em nossa base.',
+            'password.required' => 'A senha é obrigatória.',
+            'password.min' => 'A senha deve ter pelo menos 6 caracteres.',
+            'password.confirmed' => 'As senhas não conferem. Digite a mesma senha nos dois campos.',
+        ]);
+
+        $usuario = User::create([
+            'nome' => trim($dados['nome']),
+            'email' => Str::lower(trim($dados['email'])),
+            'senha_hash' => Hash::make($dados['password']),
+            'tipo_perfil' => 'ESTUDANTE',
+            'status_conta' => 'ATIVA',
+        ]);
+
+        // Autentica o usuário recém-criado imediatamente
+        Auth::login($usuario);
+        $request->session()->regenerate();
+
+        return redirect()->route('estudante.painel');
+    }
+
+    /**
      * Encerra a sessão de forma segura (suporta tanto chamada Fetch/JSON quanto Form POST).
      */
     public function logout(Request $request)

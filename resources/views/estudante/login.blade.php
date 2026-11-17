@@ -114,7 +114,7 @@
                 >
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="position: relative;">
                 <label for="password">Senha</label>
                 <input
                     type="password"
@@ -123,7 +123,12 @@
                     required
                     autocomplete="current-password"
                     placeholder="••••••••"
+                    style="padding-right: 40px;"
                 >
+                <!-- O botão agora usa uma tag img com o asset do Laravel -->
+                <button type="button" onclick="toggleSenha('password', 'icone_senha')" style="position: absolute; right: 10px; top: 32px; background: none; border: none; cursor: pointer; padding: 2px;">
+                    <img src="{{ asset('assets/img/ver_senha.svg') }}" id="icone_senha" alt="Mostrar/Ocultar Senha" style="width: 40px; height: 40px; opacity: 0.6; transition: opacity 0.2s;">
+                </button>
             </div>
 
             <button type="submit" id="btn-entrar" class="btn-primario" style="width: 100%; background-color: var(--azul-primario); color: var(--branco);">
@@ -131,13 +136,42 @@
             </button>
 
             <div class="links-uteis">
-                <a href="{{ route('home') }}">← Voltar ao Início</a>
+                <a href="{{ route('cadastro') }}">Criar conta</a>
                 <a href="#">Esqueceu a senha?</a>
+                
+            </div>
+
+            <div class="links-uteis">
+                <a href="{{ route('home') }}">← Voltar ao Início</a>
             </div>
         </form>
     </div>
 
     <script>
+        document.getElementById('form-login-laravel').addEventListener('submit', function () {
+            const btn = document.getElementById('btn-entrar');
+            btn.textContent = 'Autenticando...';
+            btn.disabled = true;
+        });
+    </script>
+
+    <script>
+        function toggleSenha(inputId, iconeId) {
+            const input = document.getElementById(inputId);
+            const icone = document.getElementById(iconeId);
+            
+            // Alterna o tipo do input (entre senha e texto)
+            if (input.type === 'password') {
+                input.type = 'text';
+                // Quando a senha fica visível, muda para o ícone de "ocultar"
+                icone.src = "{{ asset('assets/img/ocultar_senha.svg') }}";
+            } else {
+                input.type = 'password';
+                // Quando a senha fica oculta, muda para o ícone de "ver"
+                icone.src = "{{ asset('assets/img/ver_senha.svg') }}";
+            }
+        }
+        
         document.getElementById('form-login-laravel').addEventListener('submit', function () {
             const btn = document.getElementById('btn-entrar');
             btn.textContent = 'Autenticando...';

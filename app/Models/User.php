@@ -100,4 +100,14 @@ class User extends Authenticatable
     {
         return $this->tipo_perfil === 'DIRETOR';
     }
+
+    /**
+     * Relação direta: Um usuário tem um (hasOne) Perfil de Estudante.
+     */
+    public function perfil()
+    {
+        return $this->hasOne(PerfilEstudante::class, 'id_usuario');
+    }
+
+    
 }

@@ -14,6 +14,10 @@ Route::get('/login', [AuthController::class, 'exibirLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'autenticar'])->name('login.autenticar');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+// Rotas de Cadastro
+Route::get('/cadastro', [AuthController::class, 'exibirCadastro'])->name('cadastro');
+Route::post('/cadastro', [AuthController::class, 'registrar'])->name('cadastro.registrar');
+
 // Rotas Exclusivas do Estudante (Protegidas por Sessão + RBAC)
 Route::middleware(['auth', 'perfil:ESTUDANTE'])->group(function () {
     Route::get('/area-do-estudante', function () {

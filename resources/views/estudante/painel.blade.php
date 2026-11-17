@@ -7,34 +7,29 @@
     <title>UNILEGI - Painel do Estudante</title>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <!-- Favicon dinâmico do Laravel -->
     <link rel="icon" type="image/svg+xml" href="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}">
 
-    <!-- O nosso Motor Vite (Bootstrap e Alpine) -->
+    <!-- Motor Vite (Bootstrap e Alpine) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- CSS Global e CSS do Painel da pasta Public -->
+    <!-- CSS Global e CSS do Painel -->
     <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/painel.css') }}">
 
     <!-- Leaflet CSS (Mapa Interativo) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <!-- Bibliotecas JS: Chart.js e Leaflet -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-
-    <!-- Script Controlador do Painel da pasta Public -->
-    <script src="{{ asset('assets/js/painel_estudante.js') }}" defer></script>
-
-    <!-- Bibliotecas JS: Chart.js e Leaflet -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    
-    <!-- NOVO: Flatpickr (Super Calendário) -->
+    <!-- Flatpickr (Super Calendário) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr" defer></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js" defer></script>
+
+    <!-- Bibliotecas JS: Chart.js e Leaflet -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+
+    <!-- Script Controlador do Painel -->
+    <script src="{{ asset('assets/js/painel_estudante.js') }}" defer></script>
 </head>
 
 <body>
@@ -42,7 +37,6 @@
     <!-- Navbar Superior -->
     <header class="navbar">
         <div class="logo">
-            <!-- Imagem injetada dinamicamente pelo Laravel -->
             <img src="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}" alt="Logo UNILEGI" class="logo-img" style="height: 45px;">
             <span>UNILEGI | Estudante</span>
         </div>
@@ -74,20 +68,19 @@
              ================================================================= -->
         <section id="aba-dashboard" class="secao-aba ativa">
 
-            <!-- PRIMEIRA CAIXA: Resumo do Aluno, Gráficos e Mapa -->
             <div class="caixa-dashboard">
                 <div class="topo-boas-vindas">
                     <div>
                         <h2 id="nome-estudante">Olá, Estudante!</h2>
                         <p>Aqui está o cruzamento atualizado do seu perfil com os editais abertos.</p>
                     </div>
-                    <span class="badge-localizacao" id="badge-origem">📍 Origem: Sorocaba - SP (Raio 2km)</span>
+                    <span class="badge-localizacao" id="badge-origem">📍 Origem: Carregando...</span>
                 </div>
 
                 <!-- Indicadores Numéricos (KPIs) -->
                 <div class="kpis-grid">
                     <div class="kpi-card">
-                        <div class="kpi-titulo">Universidades Mapeadas</div>
+                        <div class="kpi-titulo">Modalidades Ativas</div>
                         <div class="kpi-valor" id="kpi-universidades">0</div>
                     </div>
                     <div class="kpi-card verde">
@@ -107,23 +100,23 @@
                 <!-- Gráficos Lado a Lado -->
                 <div class="graficos-grid">
                     <div class="grafico-box">
-                        <h3>Distribuição por Probabilidade de Aprovação</h3>
+                        <h3>Distribuição por Compatibilidade</h3>
                         <div class="canvas-container">
                             <canvas id="graficoPizza"></canvas>
                         </div>
                     </div>
                     <div class="grafico-box">
-                        <h3>Distinção de Vagas por Modalidade e Escopo</h3>
+                        <h3>Modalidades de Benefício e Cotas</h3>
                         <div class="canvas-container">
                             <canvas id="graficoBarras"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Mapa Interativo com Arcos e Raio de 2km -->
+                <!-- Mapa Interativo -->
                 <div class="mapa-section">
                     <div class="mapa-header">
-                        <strong>🗺️ Radar Geográfico de Oportunidades (Raio de Precisão: 2 km)</strong>
+                        <strong>🗺️ Radar Geográfico de Oportunidades (Distância Aproximada em Linha Reta)</strong>
                         <div class="legenda-mapa">
                             <span class="legenda-item"><i class="ponto-cor" style="background:#004488;"></i> Sua
                                 Residência</span>
@@ -145,7 +138,7 @@
                     <div>
                         <h2 style="color: var(--azul-escuro);">As 8 Oportunidades Mais Promissoras</h2>
                         <p style="color: var(--texto-mutado); font-size: 0.95rem;">Ordenadas automaticamente pela maior
-                            compatibilidade com a sua ficha e custo de estadia.</p>
+                            compatibilidade com a sua ficha e urgência de prazo.</p>
                     </div>
                     <button class="btn-primario" onclick="trocarAba('aba-historico')"
                         style="background: var(--azul-claro); color: var(--azul-primario);">Ver Todos os Editais
@@ -165,11 +158,10 @@
             <div class="secao-cards-recentes">
                 <h2 style="color: var(--azul-escuro); margin-bottom: 15px;">Histórico Completo de Editais e Filtros</h2>
 
-                <!-- NOVO: Mapa Exclusivo do Histórico (Auto-Fit) -->
                 <div id="mapa-container-historico" class="mapa-section" style="margin-bottom: 25px;">
                     <div class="mapa-header" style="background-color: var(--azul-primario);">
-                        <strong>🗺️ Inspetor de Rota Detalhada</strong>
-                        <span style="font-size: 0.85rem;">Clique em "Ver Rota" em qualquer edital abaixo para focar no
+                        <strong>🗺️ Inspetor de Conexão Geográfica</strong>
+                        <span style="font-size: 0.85rem;">Clique em "Ver no Mapa" em qualquer edital abaixo para focar no
                             trajeto.</span>
                     </div>
                     <div id="mapa-brasil-historico" style="width: 100%; height: 350px; background-color: #eef5fc;">
@@ -178,7 +170,7 @@
 
                 <div class="barra-filtros">
                     <div>
-                        <label for="filtro-chance">Probabilidade</label>
+                        <label for="filtro-chance">Compatibilidade</label>
                         <select id="filtro-chance" onchange="aplicarFiltrosHistorico()">
                             <option value="TODAS">Todas as Chances</option>
                             <option value="ALTA">🟢 Alta Compatibilidade</option>
@@ -217,7 +209,7 @@
             </div>
         </section>
 
-       <!-- =================================================================
+        <!-- =================================================================
              ABA 3: FICHA SOCIOECONÔMICA E DE MOBILIDADE COMPLETA
              ================================================================= -->
         <section id="aba-ficha" class="secao-aba">
@@ -229,7 +221,7 @@
                     </button>
                 </div>
                 <p style="color: var(--texto-mutado); margin-bottom: 20px;">
-                    Todos os campos marcados com <span style="color: #dc3545; font-weight: bold;">*</span> são obrigatórios. Você pode buscar sua localização pelo <strong>CEP</strong> ou selecionando <strong>Estado e Cidade</strong>.
+                    Os campos marcados com <span style="color: #dc3545; font-weight: bold;">*</span> são obrigatórios. Digite o seu <strong>CEP</strong> para preencher Estado e Cidade automaticamente, ou selecione apenas <strong>Estado e Cidade</strong> (sem precisar de CEP).
                 </p>
 
                 <div id="alerta-ficha" style="display:none; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold;"></div>
@@ -265,13 +257,18 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="nota_media_enem">Média Estimada no ENEM / Vestibular (400 a 1000) <span style="color:#dc3545">*</span></label>
-                            <input type="number" id="nota_media_enem" name="nota_media_enem" min="400" max="1000" step="0.1" required placeholder="Ex: 720">
+                            <label for="nota_media_enem">Média Estimada (ENEM, Provão Paulista ou Vestibular) <span style="color:#dc3545">*</span></label>
+                            <input type="number" id="nota_media_enem" name="nota_media_enem" min="0" max="1000" step="0.1" required placeholder="Ex: 720">
                         </div>
                     </div>
 
-                    <h3 class="form-secao-titulo">2. Geografia e Disposição de Mudança (Busca por CEP ou Estado/Cidade)</h3>
+                    <h3 class="form-secao-titulo">2. Geografia e Disposição de Mudança</h3>
                     <div class="form-linha">
+                        <div class="form-group">
+                            <label for="cep">CEP <span style="color: var(--texto-mutado); font-weight: normal; font-size: 0.8rem;">(Opcional — busca Estado/Cidade)</span></label>
+                            <input type="text" id="cep" name="cep" maxlength="9" placeholder="Ex: 18013-004" onblur="buscarCep()">
+                        </div>
+
                         <div class="form-group">
                             <label for="estado_origem">Estado (UF) <span style="color:#dc3545">*</span></label>
                             <select id="estado_origem" name="estado_origem" required onchange="aoMudarEstado(this.value)">
@@ -312,11 +309,6 @@
                                 <option value="" disabled selected>Selecione o Estado primeiro...</option>
                             </select>
                         </div>
-
-                        <div class="form-group">
-                            <label for="cep">CEP<span style="color:#dc3545">*</span></label>
-                            <input type="text" id="cep" name="cep" placeholder="Ex: 18013-004" required onblur="buscarCep()">
-                        </div>
                     </div>
 
                     <input type="hidden" id="lat_origem" name="lat_origem">
@@ -356,7 +348,7 @@
                     </div>
 
                     <button type="submit" id="btn-salvar-ficha" class="btn-primario btn-full" style="margin-top: 25px;">
-                        💾 Salvar Dados e Rever Oportunidades.
+                        💾 Salvar Dados e Rever Oportunidades
                     </button>
                 </form>
             </div>
