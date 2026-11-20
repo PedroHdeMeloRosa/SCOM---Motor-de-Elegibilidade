@@ -1,34 +1,22 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Os campos tipo_perfil e status_conta pertencem à tabela cadastros e são
+     * criados pela migration baseline. Esta migration antiga fica sem efeito
+     * para preservar a sequência histórica do repositório.
      */
     public function up(): void
     {
-        // Só tenta adicionar as colunas se a tabela 'users' existir
-        if (Schema::hasTable('users')) {
-            Schema::table('users', function (Blueprint $table) {
-                $table->string('tipo_perfil')->default('ESTUDANTE');
-                $table->string('status_conta')->default('ATIVA');
-            });
-        }
+        // RBAC já faz parte da estrutura oficial de cadastros.
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        if (Schema::hasTable('users')) {
-            Schema::table('users', function (Blueprint $table) {
-                $table->dropColumn(['tipo_perfil', 'status_conta']);
-            });
-        }
+        // Não remover colunas de autorização de uma tabela de negócio.
     }
 };
