@@ -9,6 +9,18 @@ trait CreatesScomTestSchema
 {
     protected function criarEsquemaScomParaTeste(): void
     {
+        // Limpa qualquer resíduo do banco persistente (MariaDB entre testes)
+        foreach ([
+            'comentarios',
+            'historico_retificacoes',
+            'regras_elegibilidade',
+            'editais',
+            'perfis_estudantes',
+            'cadastros',
+        ] as $tabela) {
+            Schema::dropIfExists($tabela);
+        }
+
         Schema::create('cadastros', function (Blueprint $table) {
             $table->increments('id');
             $table->string('nome', 100);

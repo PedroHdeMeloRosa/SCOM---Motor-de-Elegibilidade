@@ -9,6 +9,25 @@ use Tests\TestCase;
 
 class LegacySchemaMigrationSafetyTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Garante estado limpo entre testes no MariaDB (SQLite já é limpo por teste)
+        foreach ([
+            'comentarios',
+            'historico_retificacoes',
+            'regras_elegibilidade',
+            'editais',
+            'perfis_estudantes',
+            'cadastros',
+            'password_reset_tokens',
+            'sessions',
+        ] as $tabela) {
+            Schema::dropIfExists($tabela);
+        }
+    }
+
     public function test_baseline_creates_official_schema_and_rollback_does_not_drop_business_tables(): void
     {
         $migration = require database_path('migrations/0001_01_01_000000_create_users_table.php');
@@ -31,7 +50,6 @@ class LegacySchemaMigrationSafetyTest extends TestCase
         $this->assertTrue(Schema::hasTable('editais'));
         $this->assertTrue(Schema::hasTable('perfis_estudantes'));
     }
-
 
     public function test_additive_migrations_preserve_existing_accounts_and_edicts(): void
     {
