@@ -2,54 +2,62 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Edital;
+use App\Models\RegraElegibilidade;
+use Database\Seeders\Concerns\GuardsDemoSeeders;
+use Illuminate\Database\Seeder;
 
 class EditaisSeeder extends Seeder
 {
+    use GuardsDemoSeeders;
+
     public function run(): void
     {
-        $editais = [
+        $this->ensureDemoDatabaseIsAllowed();
+
+        // Registros fictícios para demonstração; não representam editais oficiais.
+        $dados = [
             [
-                'instituicao' => 'UNESP Sorocaba',
-                'titulo' => 'Auxílio Permanência e Moradia 2026',
-                'cidade' => 'Sorocaba', 'estado' => 'SP',
-                'latitude' => -23.4694, 'longitude' => -47.4299, // Coordenadas UNESP Sorocaba
-                'prazo_limite' => '2026-12-20',
-                'custo_moradia_estimado' => 600.00,
-                'tipo_vaga' => 'Moradia', 'escopo_geografico' => 'LOCAL'
+                'instituicao' => 'UNESP (demonstração)',
+                'nome_processo' => 'Auxílio Permanência e Moradia - exemplo',
+                'cidade' => 'Sorocaba', 'estado' => 'SP', 'regiao' => 'SUDESTE',
+                'latitude' => -23.469400, 'longitude' => -47.429900,
+                'custo_medio_republica' => 600.00, 'tem_moradia_estudantil' => false,
+                'ano_referencia' => 2026, 'link_documento' => null,
+                'regra' => ['tipo_beneficio' => 'COTA_RENDA', 'renda_maxima_per_capita' => 2118.00, 'exige_escola_publica' => true, 'exige_etnia' => false, 'nota_corte_estimada' => 580, 'prazo_inicio' => '2026-08-01', 'prazo_fim' => '2026-12-20', 'documentos_exigidos' => 'Documentos de renda e histórico escolar.'],
             ],
             [
-                'instituicao' => 'UFSCar Sorocaba',
-                'titulo' => 'Bolsa Alimentação e Apoio Estudantil',
-                'cidade' => 'Sorocaba', 'estado' => 'SP',
-                'latitude' => -23.5852, 'longitude' => -47.5233, // Coordenadas UFSCar
-                'prazo_limite' => '2026-11-30',
-                'custo_moradia_estimado' => 650.00,
-                'tipo_vaga' => 'Alimentação', 'escopo_geografico' => 'LOCAL'
-            ],
-            [
-                'instituicao' => 'UNICAMP Campinas',
-                'titulo' => 'Programa de Isenção de Taxas (SAE)',
-                'cidade' => 'Campinas', 'estado' => 'SP',
-                'latitude' => -22.8184, 'longitude' => -47.0647, // Coordenadas UNICAMP
-                'prazo_limite' => '2026-12-15',
-                'custo_moradia_estimado' => 850.00,
-                'tipo_vaga' => 'Isenção', 'escopo_geografico' => 'ESTADUAL'
-            ],
-            [
-                'instituicao' => 'USP São Paulo',
-                'titulo' => 'Alojamento CRUSP / PUSP-C',
-                'cidade' => 'São Paulo', 'estado' => 'SP',
-                'latitude' => -23.5614, 'longitude' => -46.7293, // Coordenadas USP Butantã
-                'prazo_limite' => '2027-01-10',
-                'custo_moradia_estimado' => 1200.00,
-                'tipo_vaga' => 'Alojamento', 'escopo_geografico' => 'ESTADUAL'
+                'instituicao' => 'UFSCar (demonstração)',
+                'nome_processo' => 'Bolsa Alimentação e Apoio Estudantil - exemplo',
+                'cidade' => 'Sorocaba', 'estado' => 'SP', 'regiao' => 'SUDESTE',
+                'latitude' => -23.585200, 'longitude' => -47.523300,
+                'custo_medio_republica' => 650.00, 'tem_moradia_estudantil' => true,
+                'ano_referencia' => 2026, 'link_documento' => null,
+                'regra' => ['tipo_beneficio' => 'COTA_ESCOLA_PUBLICA', 'renda_maxima_per_capita' => null, 'exige_escola_publica' => true, 'exige_etnia' => false, 'nota_corte_estimada' => 550, 'prazo_inicio' => '2026-08-01', 'prazo_fim' => '2026-12-30', 'documentos_exigidos' => 'Declaração de escolaridade.'],
             ],
         ];
 
-        foreach ($editais as $edital) {
-            Edital::create($edital);
+        foreach ($dados as $item) {
+            $regra = $item['regra'];
+            unset($item['regra']);
+
+            $edital = Edital::firstOrCreate(
+                [
+                    'instituicao' => $item['instituicao'],
+                    'nome_processo' => $item['nome_processo'],
+                    'ano_referencia' => $item['ano_referencia'],
+                ],
+                $item
+            );
+
+            RegraElegibilidade::firstOrCreate(
+                [
+                    'id_edital' => $edital->id,
+                    'tipo_beneficio' => $regra['tipo_beneficio'],
+                    'versao' => 1,
+                ],
+                $regra + ['status_regra' => 'ATIVA', 'versao' => 1]
+            );
         }
     }
 }
