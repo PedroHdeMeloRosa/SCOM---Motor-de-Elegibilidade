@@ -19,3 +19,10 @@
 - [ ] **CRUD de editais do coordenador** — rotas `/editais` (POST), `/editais/{id}` (PUT), `/editais/{id}/arquivar` (PATCH) não existem. Coordenador cria/publica (via `AuthAndStudentFlowTest`), mas **não edita nem arquiva**. Branch planejada: `feat/coordenador-crud-editais` (sairá da `main` após merge da `fix`).
 - [ ] **Testes de edição/arquivamento** movidos para essa branch junto com a feature.
 - [ ] **IA para leitura de editais** — decisão do grupo (obrigatório ou opcional?).
+## Pendência para `feat/coordenador-crud-editais`
+
+- [ ] **Testes em MariaDB** — `php artisan test --env=testing` expõe 3 bugs de configuração:
+  1. FK type mismatch (`cadastros.id` signed vs `perfis_estudantes.id_usuario`)
+  2. Guard `GuardsDemoSeeders` bloqueia `motor_elegibilidade`
+  3. 15 testes de auth retornam 419 CSRF em MariaDB
+  - **Atenção:** rodar `--env=testing` sem `.env.testing` apaga o banco de dev. Fazer junto com `feat/coordenador-crud-editais`. (~2–4h)
