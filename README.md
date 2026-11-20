@@ -1,58 +1,61 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SCOM — Motor de Elegibilidade
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicação web para cadastrar estudantes, manter uma ficha socioeconômica e comparar as informações declaradas com critérios de elegibilidade associados a editais e regras cadastradas.
 
-## About Laravel
+O resultado do motor é uma **triagem preliminar explicável**. Não representa garantia de aprovação nem probabilidade estatística.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Módulos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Estudante:** cadastro, autenticação, ficha e consulta de oportunidades publicadas.
+- **Coordenação:** cadastro de editais como rascunho, publicação/arquivamento e retificação versionada de regras.
+- **Diretoria:** administração de perfis de estudante/coordenador e situação das contas.
+- **Motor:** avaliação dos critérios cadastrados, vigência e pendências, com alertas logísticos separados.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Tecnologias
 
-## Learning Laravel
+- Laravel 13 / PHP 8.3+
+- MariaDB / MySQL
+- Blade, JavaScript e Vite
+- PHPUnit
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Desenvolvimento local (Windows/XAMPP)
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Consulte [`docs/AMBIENTE_DESENVOLVIMENTO.md`](docs/AMBIENTE_DESENVOLVIMENTO.md) e o [guia de inicialização]("==COMO INICIAR O SERVIDOR==.md"). Em resumo:
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```powershell
+composer install
+npm ci
+Copy-Item .env.example .env
+# Gere uma chave somente para uma instalação nova e isolada, se APP_KEY estiver vazia.
+php artisan key:generate
+npm run build
+php artisan test
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Configure o `.env` local para o banco `motor_elegibilidade` existente. Cada desenvolvedor mantém seu próprio `.env`; nunca versione esse arquivo.
 
-## Contributing
+## Banco de dados e preservação
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+O esquema oficial existente utiliza `cadastros`, `perfis_estudantes`, `editais`, `regras_elegibilidade`, `comentarios` e `historico_retificacoes`. Faça backup antes de qualquer alteração estrutural. Revise `php artisan migrate:status` e as migrations antes de executar `php artisan migrate`.
 
-## Code of Conduct
+**Nunca execute `migrate:fresh`, `db:wipe`, `TRUNCATE` ou importe o dump SQL sobre a base populada `motor_elegibilidade`.** Os testes usam SQLite em memória e não devem conectar ao banco de desenvolvimento.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+A chave `APP_KEY` precisa ser preservada e guardada com segurança: `perfis_estudantes.raca_cor` é armazenado com o cast criptográfico do Laravel. Perder ou trocar a chave sem um plano de recriptografia torna os valores existentes ilegíveis. Nunca versione `.env` ou `APP_KEY`. Se duas instalações acessarem a mesma base com valores `raca_cor` já criptografados, elas precisam receber a mesma chave por um canal seguro de gestão de segredos; chaves diferentes não conseguem descriptografar os mesmos registros. Em bancos locais independentes, cada ambiente pode ter sua própria chave.
 
-## Security Vulnerabilities
+## Testes e build
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```powershell
+php artisan test
+npm run build
+```
 
-## License
+O PHP CLI deve ter `pdo_sqlite` habilitado para a suíte. Testes não devem usar `motor_elegibilidade`. O workflow `.github/workflows/ci.yml` repete validação do Composer, sintaxe PHP, PHPUnit e build do Vite em pushes para `main`/`fix/estabilidade-site` e em Pull Requests para `main`.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Seeders de demonstração
+
+O `DatabaseSeeder` não cria contas automaticamente. Os seeders específicos de demonstração são bloqueados por padrão e somente podem ser usados em um banco isolado, com `SCOM_ALLOW_DEMO_SEEDERS=true` e `SCOM_DEMO_PASSWORD` configurada. Eles nunca podem ser executados em `motor_elegibilidade`.
+
+## Git
+
+Desenvolva em branches de funcionalidade/correção. Antes do Pull Request, rode testes, build e `git diff --check`, revise as alterações e documente resultados. Não faça merge com testes pendentes ou falhando.

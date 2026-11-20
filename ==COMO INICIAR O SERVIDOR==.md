@@ -1,55 +1,66 @@
-# 🚀 Guia Rápido de Inicialização (UNILEGI - Motor de Elegibilidade)
+# Guia de inicialização do SCOM — Motor de Elegibilidade
 
-Sempre que fechar e abrir o VS Code, ou reiniciar o computador, siga estes passos para religar o ambiente de desenvolvimento corretamente.
+Este guia considera que o banco legado `motor_elegibilidade` já existe e contém os registros que devem ser preservados.
 
-## 1. Preparar o Banco de Dados
-Antes de qualquer comando no VS Code, certifique-se de que o **XAMPP** está aberto e com os seguintes módulos com o status verde (Start):
-- **Apache** (Servidor Web)
-- **MySQL** (Banco de Dados)
+## 1. Iniciar os serviços
 
-## 2. Religar os Motores (Terminais)
-No VS Code, você precisará abrir **dois terminais divididos** para rodar o Backend (Laravel) e o Frontend (Vite) em simultâneo.
+No XAMPP, inicie **MySQL/MariaDB**. O Apache só é necessário para acessar o phpMyAdmin; o Laravel será servido pelo Artisan.
 
-**No Terminal 1 (Backend - Laravel):**
-Inicia o servidor PHP e disponibiliza o site na porta 8000.
+## 2. Iniciar a aplicação
+
+Na raiz do repositório, abra dois terminais.
+
+**Terminal 1 — Laravel:**
+
 ```powershell
 php artisan serve
 ```
 
-**No Terminal 2 (Frontend - Vite):**
-Inicia o motor de compilação de CSS/JS (Bootstrap e Alpine). Este termina'l deve ficar sempre aberto a rodar para que a tela atualize automaticamente (HMR).
+**Terminal 2 — Vite:**
+
 ```powershell
 npm run dev
 ```
 
-O site estará agora disponível no seu navegador em: `http://127.0.0.1:8000`
+Acesse `http://127.0.0.1:8000`.
 
----
+## 3. Limpar caches de configuração
 
-## 🛠️ Comandos Úteis e de Emergência
+Depois de alterar configurações ou rotas:
 
-### Limpar Memória e Cache (Se o Laravel ignorar atualizações ou o `.env`)
-Se fizer alterações no `.env` (como mudar o banco de dados) ou se o sistema parecer "preso" numa versão antiga, pare o `php artisan serve` (Ctrl + C) e rode:
 ```powershell
 php artisan config:clear
-php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
 ```
 
-### Resetar Banco de Dados (Modo Desenvolvimento)
-Se precisar de limpar todas as tabelas e reinjetar os dados de teste (contas de login e editais geolocalizados):
-```powershell
-# 1. Apaga e recria todas as tabelas vazias
-php artisan migrate:fresh
+Não execute `php artisan cache:clear` contra o banco legado se o cache estiver configurado para usar o banco de dados.
 
-# 2. Popula as tabelas com os dados falsos para teste
-php artisan db:seed --class=UsuariosSeeder
-php artisan db:seed --class=EditaisSeeder
+## 4. Banco de dados: regras de segurança
+
+- O banco de trabalho legado chama-se `motor_elegibilidade`.
+- Faça uma exportação SQL atualizada antes de qualquer alteração estrutural.
+- Não importe `sql/motor_elegibilidade.sql` sobre uma base populada: o arquivo contém `DROP TABLE IF EXISTS`.
+- **Nunca execute `migrate:fresh`, `db:wipe`, `TRUNCATE`, `migrate:rollback` ou seeders de demonstração no banco `motor_elegibilidade`.**
+- A migration baseline preserva tabelas de negócio existentes e seu `down()` é intencionalmente não destrutivo.
+- Antes de executar `php artisan migrate` pela primeira vez em qualquer ambiente, confirme o banco selecionado e revise `php artisan migrate:status`. A execução deve ser feita somente depois de backup verificável e revisão do diff das migrations.
+
+Para testes automatizados, utilize SQLite em memória conforme `phpunit.xml`. Se a extensão `pdo_sqlite` não estiver habilitada no PHP CLI, habilite-a no `php.ini` utilizado pelo terminal antes de executar a suíte. Os testes não devem usar `motor_elegibilidade`.
+
+## 5. Testes e validações
+
+```powershell
+php artisan test
+npm run build
 ```
 
-### Contas de Acesso Padrão (RBAC)
-- **Estudante:** `estudante@unilegi.com` | Senha: `scom2026`
-- **Coordenador:** `coordenador@unilegi.com` | Senha: `scom2026`
-- **Diretor:** `diretor@unilegi.com` | Senha: `scom2026`
+Não use `--env=production` nem a conexão de produção para rodar testes. Antes do merge, confira também:
 
+```powershell
+git diff --check
+git status -sb
+```
+
+## 6. Credenciais
+
+Não existem credenciais padrão para novas instalações. O cadastro público cria exclusivamente estudantes. A primeira conta administrativa deve ser provisionada por procedimento controlado, fora do cadastro público. Nunca reutilize senhas de demonstração em um ambiente com dados reais.
