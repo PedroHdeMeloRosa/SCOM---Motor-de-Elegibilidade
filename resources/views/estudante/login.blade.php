@@ -137,7 +137,7 @@
 
             <div class="links-uteis">
                 <a href="{{ route('cadastro') }}">Criar conta</a>
-                <a href="#">Esqueceu a senha?</a>
+                <span aria-disabled="true" title="Recuperação de senha ainda não configurada">Recuperação de senha indisponível</span>
                 
             </div>
 
@@ -146,14 +146,6 @@
             </div>
         </form>
     </div>
-
-    <script>
-        document.getElementById('form-login-laravel').addEventListener('submit', function () {
-            const btn = document.getElementById('btn-entrar');
-            btn.textContent = 'Autenticando...';
-            btn.disabled = true;
-        });
-    </script>
 
     <script>
         function toggleSenha(inputId, iconeId) {

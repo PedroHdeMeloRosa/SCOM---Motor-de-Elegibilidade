@@ -24,6 +24,35 @@ function getCsrfToken() {
     return meta ? meta.content : "";
 }
 
+// Valores vindos do banco/API nunca devem ser interpolados em HTML sem escape.
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+}
+
+function safeDocumentUrl(value) {
+    const raw = String(value ?? "").trim();
+    if (!/^https?:\/\//i.test(raw)) return "";
+    try {
+        const url = new URL(raw);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+    } catch {
+        return "";
+    }
+}
+
+function rotuloElegibilidade(status) {
+    return ({
+        COMPATIVEL: "Compatível com os critérios cadastrados",
+        INCOMPATIVEL: "Incompatível com um ou mais critérios",
+        PENDENTE: "Dados insuficientes para concluir",
+        AGUARDANDO_ABERTURA: "Inscrições ainda não iniciadas",
+        ENCERRADO: "Prazo encerrado",
+        REGRA_INVALIDA: "Regra precisa de revisão"
+    })[status] || "Classificação não disponível";
+}
+
 // ==============================================================================
 // INICIALIZAÇÃO
 // ==============================================================================
@@ -78,7 +107,13 @@ function trocarAba(idAba) {
 // ==============================================================================
 async function carregarDadosPainel() {
     try {
-        const resposta = await fetch("/api/estudante/painel");
+        const resposta = await fetch("/api/estudante/painel", {
+            headers: { "Accept": "application/json" }
+        });
+        if (resposta.status === 401) {
+            window.location.href = "/login";
+            return;
+        }
         const json = await resposta.json();
 
         if (!json.sucesso) throw new Error(json.mensagem);
@@ -103,13 +138,13 @@ async function carregarDadosPainel() {
         renderizarGraficos(json.kpis, todasOportunidades);
 
         // TOP 8 DO DASHBOARD: Filtra expirados, ordena por prioridade e depois por prazo mais urgente
-        const pesosProb = { ALTA: 1, MEDIA: 2, BAIXA: 3 };
-        const vagasAtivas = todasOportunidades.filter(v => v.probabilidade !== 'EXPIRADO');
+        const pesosStatus = { COMPATIVEL: 1, PENDENTE: 2, AGUARDANDO_ABERTURA: 3, INCOMPATIVEL: 4, ENCERRADO: 5 };
+        const vagasAtivas = todasOportunidades.filter(v => v.status_elegibilidade !== 'ENCERRADO');
 
         const top8 = [...vagasAtivas].sort((a, b) => {
-            if (pesosProb[a.probabilidade] !== pesosProb[b.probabilidade]) {
-                return pesosProb[a.probabilidade] - pesosProb[b.probabilidade];
-            }
+            const pesoA = pesosStatus[a.status_elegibilidade] ?? 99;
+            const pesoB = pesosStatus[b.status_elegibilidade] ?? 99;
+            if (pesoA !== pesoB) return pesoA - pesoB;
             return new Date(a.prazo_limite || a.prazo_fim) - new Date(b.prazo_limite || b.prazo_fim);
         }).slice(0, 8);
 
@@ -141,7 +176,7 @@ async function salvarFichaSocioeconomica(evento) {
     const dadosFicha = {
         renda_per_capita: document.getElementById("renda_per_capita").value,
         tipo_escola: document.getElementById("tipo_escola").value,
-        etnia: document.getElementById("etnia").value,
+        raca_cor: document.getElementById("raca_cor").value,
         nota_media_enem: document.getElementById("nota_media_enem").value,
         cep: document.getElementById("cep").value.trim(), // Opcional
         cidade_origem: document.getElementById("cidade_origem").value,
@@ -190,7 +225,12 @@ async function salvarFichaSocioeconomica(evento) {
 }
 
 async function fazerLogout() {
-    try { await fetch("/logout", { method: "POST", headers: { "X-CSRF-TOKEN": getCsrfToken() } }); }
+    try {
+        await fetch("/logout", {
+            method: "POST",
+            headers: { "Accept": "application/json", "X-CSRF-TOKEN": getCsrfToken() }
+        });
+    }
     finally { window.location.href = "/login"; }
 }
 
@@ -205,7 +245,7 @@ async function preencherFormularioPerfil(perfil) {
 
     document.getElementById("renda_per_capita").value = perfil.renda_per_capita ?? "";
     document.getElementById("tipo_escola").value = perfil.tipo_escola || "";
-    document.getElementById("etnia").value = perfil.etnia || "";
+    document.getElementById("raca_cor").value = perfil.raca_cor || "";
     document.getElementById("nota_media_enem").value = perfil.nota_media_enem ?? "";
     document.getElementById("cep").value = perfil.cep || "";
 
@@ -350,9 +390,18 @@ async function buscarCep() {
 // MAPA PRINCIPAL (DASHBOARD)
 // ==============================================================================
 function renderizarMapaBrasil(perfil, oportunidades) {
-    const lat = parseFloat(perfil?.lat_origem) || -15.793889;
-    const lng = parseFloat(perfil?.lng_origem) || -47.882778;
-    const temOrigemReal = Boolean(perfil && perfil.cidade_origem && perfil.lat_origem);
+    const latInformada = perfil?.lat_origem;
+    const lngInformada = perfil?.lng_origem;
+    const latNumero = Number(latInformada);
+    const lngNumero = Number(lngInformada);
+    const temOrigemReal = Boolean(
+        perfil?.cidade_origem && latInformada !== null && latInformada !== undefined && latInformada !== "" &&
+        lngInformada !== null && lngInformada !== undefined && lngInformada !== "" &&
+        Number.isFinite(latNumero) && Number.isFinite(lngNumero) &&
+        latNumero >= -90 && latNumero <= 90 && lngNumero >= -180 && lngNumero <= 180
+    );
+    const lat = temOrigemReal ? latNumero : -15.793889;
+    const lng = temOrigemReal ? lngNumero : -47.882778;
 
     if (mapaLeaflet) {
         camadaElementosMapa.clearLayers();
@@ -378,50 +427,65 @@ function renderizarMapaBrasil(perfil, oportunidades) {
         mapaLeaflet.on('zoomend', atualizarRadarOrigem);
     }
 
-    if (!temOrigemReal) {
-        circuloRadarOrigem = null;
-        mapaLeaflet.setView([-15.793889, -47.882778], 4);
-        return;
+    clearInterval(intervaloRadar);
+    circuloRadarOrigem = null;
+    limitesGeraisMapa = temOrigemReal ? L.latLngBounds([[lat, lng]]) : null;
+
+    if (temOrigemReal) {
+        const iconePulso = L.divIcon({ className: 'icone-origem-pulso', iconSize: [16, 16] });
+        L.marker([lat, lng], { icon: iconePulso, zIndexOffset: 1000 })
+            .bindPopup(`<b>🏠 Ponto de Partida: ${escapeHtml(perfil.cidade_origem)}/${escapeHtml(perfil.estado_origem)}</b>`)
+            .addTo(camadaElementosMapa);
+
+        circuloRadarOrigem = L.circle([lat, lng], {
+            color: "#004488", fillColor: "#004488", fillOpacity: 0.2, radius: 25000, weight: 1, interactive: false
+        }).addTo(camadaElementosMapa);
     }
-
-    limitesGeraisMapa = L.latLngBounds([[lat, lng]]);
-
-    const iconePulso = L.divIcon({ className: 'icone-origem-pulso', iconSize: [16, 16] });
-    L.marker([lat, lng], { icon: iconePulso, zIndexOffset: 1000 })
-        .bindPopup(`<b>🏠 Ponto de Partida: ${perfil.cidade_origem}/${perfil.estado_origem}</b>`).addTo(camadaElementosMapa);
-
-    circuloRadarOrigem = L.circle([lat, lng], {
-        color: "#004488", fillColor: "#004488", fillOpacity: 0.2, radius: 25000, weight: 1, interactive: false
-    }).addTo(camadaElementosMapa);
 
     const cores = { ALTA: "#28a745", MEDIA: "#ffc107", BAIXA: "#dc3545", EXPIRADO: "#6c757d" };
     window.rotasDashboard = {};
 
     oportunidades.forEach(vaga => {
-        const cor = cores[vaga.probabilidade] || "#004488";
-        const latVaga = parseFloat(vaga.latitude) || 0;
-        const lngVaga = parseFloat(vaga.longitude) || 0;
+        const cor = cores[vaga.classe_visual] || "#004488";
+        const latVaga = Number(vaga.latitude);
+        const lngVaga = Number(vaga.longitude);
+        if (!Number.isFinite(latVaga) || !Number.isFinite(lngVaga)
+            || latVaga < -90 || latVaga > 90 || lngVaga < -180 || lngVaga > 180) {
+            return;
+        }
 
         const pino = L.circleMarker([latVaga, lngVaga], { color: cor, fillColor: cor, fillOpacity: 0.8, radius: 6, weight: 2 })
-            .bindPopup(`<b>🎓 ${vaga.instituicao} (${vaga.cidade})</b><br>${formatarBeneficio(vaga.tipo_beneficio)}<br>Compatibilidade: ${vaga.probabilidade}`);
+            .bindPopup(`<b>🎓 ${escapeHtml(vaga.instituicao)} (${escapeHtml(vaga.cidade)})</b><br>${escapeHtml(formatarBeneficio(vaga.tipo_beneficio))}<br>${escapeHtml(rotuloElegibilidade(vaga.status_elegibilidade))}`);
+        const camadas = [pino];
 
-        const arco = L.polyline(gerarPontosArco([lat, lng], [latVaga, lngVaga]), { color: cor, weight: 2.5, opacity: 0.8, className: "arco-voo" });
+        // Sem coordenadas de origem, mostra o destino, mas não inventa uma linha de deslocamento.
+        if (temOrigemReal) {
+            camadas.push(L.polyline(gerarPontosArco([lat, lng], [latVaga, lngVaga]), {
+                color: cor, weight: 2.5, opacity: 0.8, className: "arco-voo"
+            }));
+        }
 
-        const grupo = L.layerGroup([pino, arco]);
-        grupo.addTo(camadaElementosMapa);
-
-        limitesGeraisMapa.extend([latVaga, lngVaga]);
+        const grupo = L.layerGroup(camadas).addTo(camadaElementosMapa);
+        if (limitesGeraisMapa) {
+            limitesGeraisMapa.extend([latVaga, lngVaga]);
+        } else {
+            limitesGeraisMapa = L.latLngBounds([[latVaga, lngVaga]]);
+        }
 
         const idUnico = vaga.id || vaga.id_regra || vaga.id_edital;
         window.rotasDashboard[idUnico] = {
-            camada: grupo, latDestino: latVaga, lngDestino: lngVaga, latOrigem: lat, lngOrigem: lng
+            camada: grupo,
+            latDestino: latVaga,
+            lngDestino: lngVaga,
+            latOrigem: temOrigemReal ? lat : null,
+            lngOrigem: temOrigemReal ? lng : null
         };
     });
 
-    if (oportunidades.length > 0) {
+    if (limitesGeraisMapa && limitesGeraisMapa.isValid()) {
         mapaLeaflet.fitBounds(limitesGeraisMapa, { padding: [40, 40], maxZoom: 8 });
     } else {
-        mapaLeaflet.setView([lat, lng], 6);
+        mapaLeaflet.setView([lat, lng], 4);
     }
     atualizarRadarOrigem();
 }
@@ -481,8 +545,15 @@ function destacarRotaDashboard(idRegra, botaoCard) {
     botaoCard.innerHTML = "👁️‍🗨️ Em Destaque";
     rotaEmDestaqueAtual = idRegra;
 
-    const limitesDestaque = L.latLngBounds([objRota.latOrigem, objRota.lngOrigem], [objRota.latDestino, objRota.lngDestino]);
-    mapaLeaflet.fitBounds(limitesDestaque, { padding: [60, 60], maxZoom: 7 });
+    if (objRota.latOrigem === null || objRota.lngOrigem === null) {
+        mapaLeaflet.setView([objRota.latDestino, objRota.lngDestino], 8);
+    } else {
+        const limitesDestaque = L.latLngBounds(
+            [objRota.latOrigem, objRota.lngOrigem],
+            [objRota.latDestino, objRota.lngDestino]
+        );
+        mapaLeaflet.fitBounds(limitesDestaque, { padding: [60, 60], maxZoom: 7 });
+    }
     document.getElementById("aba-dashboard").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -502,18 +573,43 @@ function focarRotaHistorico(idRegra) {
     if (!camadaHistorico) inicializarMapaHistorico();
     camadaHistorico.clearLayers();
 
-    const latO = parseFloat(dadosPerfil.lat_origem);
-    const lngO = parseFloat(dadosPerfil.lng_origem);
-    const latV = parseFloat(vaga.latitude);
-    const lngV = parseFloat(vaga.longitude);
+    const latV = Number(vaga.latitude);
+    const lngV = Number(vaga.longitude);
+    if (!Number.isFinite(latV) || !Number.isFinite(lngV)
+        || latV < -90 || latV > 90 || lngV < -180 || lngV > 180) {
+        return;
+    }
 
-    L.circle([latO, lngO], { color: "#004488", fillColor: "#004488", fillOpacity: 0.5, radius: 2000 }).addTo(camadaHistorico);
-    const cor = { ALTA: "#28a745", MEDIA: "#ffc107", BAIXA: "#dc3545", EXPIRADO: "#6c757d" }[vaga.probabilidade] || "#004488";
-    L.circle([latV, lngV], { color: cor, fillColor: cor, fillOpacity: 0.5, radius: 2000 }).addTo(camadaHistorico);
+    const cor = { ALTA: "#28a745", MEDIA: "#ffc107", BAIXA: "#dc3545", EXPIRADO: "#6c757d" }[vaga.classe_visual] || "#004488";
+    L.circle([latV, lngV], { color: cor, fillColor: cor, fillOpacity: 0.5, radius: 2000 })
+        .bindPopup(`<b>🎓 ${escapeHtml(vaga.instituicao)} (${escapeHtml(vaga.cidade)})</b>`)
+        .addTo(camadaHistorico);
 
-    L.polyline(gerarPontosArco([latO, lngO], [latV, lngV]), { color: cor, weight: 3, className: "arco-voo" }).addTo(camadaHistorico);
+    const latOrigemInformada = dadosPerfil.lat_origem;
+    const lngOrigemInformada = dadosPerfil.lng_origem;
+    const origemInformada = latOrigemInformada !== null && latOrigemInformada !== undefined && latOrigemInformada !== ''
+        && lngOrigemInformada !== null && lngOrigemInformada !== undefined && lngOrigemInformada !== '';
 
-    mapaHistorico.fitBounds(L.latLngBounds([latO, lngO], [latV, lngV]), { padding: [50, 50], maxZoom: 10 });
+    if (origemInformada) {
+        const latO = Number(latOrigemInformada);
+        const lngO = Number(lngOrigemInformada);
+        const origemValida = Number.isFinite(latO) && Number.isFinite(lngO)
+            && latO >= -90 && latO <= 90 && lngO >= -180 && lngO <= 180;
+
+        if (origemValida) {
+            L.circle([latO, lngO], { color: "#004488", fillColor: "#004488", fillOpacity: 0.5, radius: 2000 })
+                .addTo(camadaHistorico);
+            L.polyline(gerarPontosArco([latO, lngO], [latV, lngV]), {
+                color: cor, weight: 3, className: "arco-voo"
+            }).addTo(camadaHistorico);
+            mapaHistorico.fitBounds(L.latLngBounds([latO, lngO], [latV, lngV]), { padding: [50, 50], maxZoom: 10 });
+        } else {
+            mapaHistorico.setView([latV, lngV], 8);
+        }
+    } else {
+        mapaHistorico.setView([latV, lngV], 8);
+    }
+
     document.getElementById("mapa-container-historico").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -563,8 +659,8 @@ function inicializarSuperCalendario() {
                 btnLimpar.style.display = "block";
                 const editaisNoDia = todasOportunidades.filter(v => (v.prazo_limite || v.prazo_fim) === dateStr);
                 if (editaisNoDia.length > 0) {
-                    const nomes = editaisNoDia.map(e => e.instituicao.split(' ')[0]).join(', ');
-                    divLegenda.innerHTML = `⚠️ Encerram neste dia: <b>${nomes}</b>`;
+                    const nomes = editaisNoDia.map(e => String(e.instituicao || "Instituição").split(' ')[0]).join(', ');
+                    divLegenda.innerHTML = `⚠️ Encerram neste dia: <b>${escapeHtml(nomes)}</b>`;
                     divLegenda.style.color = "#004488";
                 } else {
                     divLegenda.innerHTML = `Mostrando editais até o dia selecionado.`;
@@ -599,7 +695,7 @@ function renderizarGraficos(kpis, oportunidades) {
     chartPizza = new Chart(ctxPizza, {
         type: "doughnut",
         data: {
-            labels: ["Alta Chance", "Atenção", "Improvável"],
+            labels: ["Compatível", "Dados pendentes", "Incompatível"],
             datasets: [{
                 data: [kpis.verdes, kpis.amarelas, kpis.vermelhas],
                 backgroundColor: ["#28a745", "#ffc107", "#dc3545"]
@@ -610,7 +706,7 @@ function renderizarGraficos(kpis, oportunidades) {
 
     const contagemTipos = {};
     oportunidades.forEach(vaga => {
-        if (vaga.probabilidade !== 'EXPIRADO') {
+        if (vaga.status_elegibilidade !== 'ENCERRADO') {
             const tipo = formatarBeneficio(vaga.tipo_beneficio || vaga.tipo_vaga);
             contagemTipos[tipo] = (contagemTipos[tipo] || 0) + 1;
         }
@@ -665,7 +761,7 @@ function aplicarFiltrosHistorico(fichaCompleta = true) {
     const pPrazo = inputOcultoData ? inputOcultoData.selectedDates[0] : null;
 
     const filtrados = todasOportunidades.filter(vaga => {
-        const condChance = pChance === "TODAS" || vaga.probabilidade === pChance;
+        const condChance = pChance === "TODAS" || vaga.status_elegibilidade === pChance;
         const condEscopo = pEscopo === "TODOS" || (vaga.escopo_geografico || vaga.escopo_mobilidade) === pEscopo;
 
         let condPrazo = true;
@@ -677,8 +773,8 @@ function aplicarFiltrosHistorico(fichaCompleta = true) {
             condPrazo = dataEdital <= dataFiltro;
         }
 
-        const custoVaga = vaga.custo_medio_republica || vaga.custo_moradia_estimado || 0;
-        const condOrcamento = isNaN(pOrcamento) || custoVaga <= pOrcamento;
+        const custoVaga = vaga.custo_medio_republica ?? vaga.custo_moradia_estimado;
+        const condOrcamento = isNaN(pOrcamento) || custoVaga === null || custoVaga === undefined || Number(custoVaga) <= pOrcamento;
 
         return condChance && condEscopo && condPrazo && condOrcamento;
     });
@@ -686,9 +782,9 @@ function aplicarFiltrosHistorico(fichaCompleta = true) {
     if (filtrados.length === 0) {
         grid.innerHTML = '<div class="estado-vazio"><p>Nenhum edital encontrado para esta combinação de filtros.</p></div>';
     } else {
-        const grupos = { ALTA: [], MEDIA: [], BAIXA: [], EXPIRADO: [] };
+        const grupos = { COMPATIVEL: [], PENDENTE: [], AGUARDANDO_ABERTURA: [], INCOMPATIVEL: [], ENCERRADO: [], REGRA_INVALIDA: [] };
         filtrados.forEach(vaga => {
-            if (grupos[vaga.probabilidade]) grupos[vaga.probabilidade].push(vaga);
+            if (grupos[vaga.status_elegibilidade]) grupos[vaga.status_elegibilidade].push(vaga);
         });
 
         Object.keys(grupos).forEach(chave => {
@@ -697,70 +793,91 @@ function aplicarFiltrosHistorico(fichaCompleta = true) {
 
         let htmlGrid = "";
 
-        if (grupos.ALTA.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 5px;">Alta Compatibilidade</h3></div>`;
-            htmlGrid += grupos.ALTA.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        if (grupos.MEDIA.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #ffc107; border-bottom: 2px solid #ffc107; padding-bottom: 5px;">Atenção aos Critérios</h3></div>`;
-            htmlGrid += grupos.MEDIA.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        if (grupos.BAIXA.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 5px;">Improváveis / Incompatíveis</h3></div>`;
-            htmlGrid += grupos.BAIXA.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        if (grupos.EXPIRADO.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #6c757d; border-bottom: 2px solid #6c757d; padding-bottom: 5px;">Já Realizados / Expirados</h3></div>`;
-            htmlGrid += grupos.EXPIRADO.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
+        const secoes = [
+            ["COMPATIVEL", "Compatíveis com os critérios", "#28a745"],
+            ["PENDENTE", "Dados pendentes", "#ffc107"],
+            ["AGUARDANDO_ABERTURA", "Inscrições ainda não iniciadas", "#0d6efd"],
+            ["INCOMPATIVEL", "Incompatíveis com os critérios", "#dc3545"],
+            ["ENCERRADO", "Prazos encerrados", "#6c757d"],
+            ["REGRA_INVALIDA", "Regras que precisam de revisão administrativa", "#7c3aed"]
+        ];
+        secoes.forEach(([chave, titulo, cor]) => {
+            if (grupos[chave].length > 0) {
+                htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: ${cor}; border-bottom: 2px solid ${cor}; padding-bottom: 5px;">${titulo}</h3></div>`;
+                htmlGrid += grupos[chave].map(vaga => montarCardHTML(vaga, "historico")).join("");
+            }
+        });
 
         grid.innerHTML = htmlGrid;
     }
 }
 
 function montarCardHTML(vaga, contexto) {
-    let cssProb, textoProb;
-    if (vaga.probabilidade === "ALTA") { cssProb = "tag-alta"; textoProb = "Alta Compatibilidade"; }
-    else if (vaga.probabilidade === "MEDIA") { cssProb = "tag-media"; textoProb = "Atenção aos Critérios"; }
-    else if (vaga.probabilidade === "BAIXA") { cssProb = "tag-baixa"; textoProb = "Incompatível"; }
-    else { cssProb = "tag-expirado"; textoProb = "Já Realizado / Expirado"; }
+    const status = vaga.status_elegibilidade || "PENDENTE";
+    const classeVisual = vaga.classe_visual || "MEDIA";
+    const classes = { ALTA: "tag-alta", MEDIA: "tag-media", BAIXA: "tag-baixa", EXPIRADO: "tag-expirado" };
+    const classeTag = classes[classeVisual] || "tag-media";
+    const textoStatus = rotuloElegibilidade(status);
 
-    const id = vaga.id || vaga.id_regra || vaga.id_edital;
-    const titulo = vaga.nome_processo || vaga.titulo;
-    const tipo = vaga.tipo_beneficio || vaga.tipo_vaga;
-    const prazo = vaga.prazo_formatado || vaga.prazo_limite;
-    const custo = parseFloat(vaga.custo_medio_republica || vaga.custo_moradia_estimado || 0).toFixed(2);
-    const notaCorte = vaga.nota_corte_estimada ? `${vaga.nota_corte_estimada} pts` : "Não aplicável";
-
-    const botaoMapa = contexto === "dashboard"
-        ? `<button onclick="destacarRotaDashboard(${id}, this)" class="btn-destaque">🎯 Destacar no Mapa</button>`
-        : `<button onclick="focarRotaHistorico(${id})" class="btn-foco-rota">🗺️ Ver no Mapa</button>`;
-
-    const blocoDocumentos = vaga.documentos_exigidos
-        ? `<p class="meta-info" style="font-size: 0.8rem; margin-top: 6px;">📄 <strong>Documentos:</strong> ${vaga.documentos_exigidos}</p>`
+    const id = Number.parseInt(vaga.id || vaga.id_regra || vaga.id_edital, 10);
+    const titulo = escapeHtml(vaga.nome_processo || vaga.titulo || "Edital sem título");
+    const instituicao = escapeHtml(vaga.instituicao || "Instituição não informada");
+    const cidade = escapeHtml(vaga.cidade || "Cidade não informada");
+    const estado = escapeHtml(vaga.estado || "--");
+    const tipo = escapeHtml(formatarBeneficio(vaga.tipo_beneficio || vaga.tipo_vaga));
+    const prazo = escapeHtml(vaga.prazo_formatado || vaga.prazo_limite || "Não informado");
+    const custoBruto = vaga.custo_medio_republica ?? vaga.custo_moradia_estimado;
+    const custo = custoBruto === null || custoBruto === undefined ? "Não informado" : `R$ ${Number(custoBruto).toFixed(2)}`;
+    const notaCorte = vaga.nota_corte_estimada !== null && vaga.nota_corte_estimada !== undefined
+        ? `${Number(vaga.nota_corte_estimada)} pts (estimada)`
+        : "Não informada";
+    const moradia = vaga.tem_moradia === null || vaga.tem_moradia === undefined
+        ? "Disponibilidade não informada"
+        : (vaga.tem_moradia ? "Possui moradia estudantil" : "Não possui moradia estudantil");
+    const distancia = vaga.distancia_km === null || vaga.distancia_km === undefined
+        ? "Não informada"
+        : `${Number(vaga.distancia_km).toFixed(1)} km`;
+    const diagnostico = escapeHtml(vaga.diagnostico || "Classificação pendente.");
+    const documentos = vaga.documentos_exigidos
+        ? `<p class="meta-info" style="font-size: 0.8rem; margin-top: 6px;">📄 <strong>Documentos:</strong> ${escapeHtml(vaga.documentos_exigidos)}</p>`
         : "";
+    const alertasLogisticos = Array.isArray(vaga.alertas_logisticos) && vaga.alertas_logisticos.length
+        ? `<p class="meta-info"><strong>Logística:</strong> ${escapeHtml(vaga.alertas_logisticos.join(" "))}</p>`
+        : "";
+    const botaoMapa = Number.isInteger(id) && id > 0
+        ? (contexto === "dashboard"
+            ? `<button onclick="destacarRotaDashboard(${id}, this)" class="btn-destaque">🎯 Destacar no Mapa</button>`
+            : `<button onclick="focarRotaHistorico(${id})" class="btn-foco-rota">🗺️ Ver no Mapa</button>`)
+        : "";
+    const linkDocumento = safeDocumentUrl(vaga.link_documento);
+    const urlDetalhe = escapeHtml(vaga.url_detalhe || '#');
+    const linkDocumentoHTML = linkDocumento
+        ? `<a href="${escapeHtml(linkDocumento)}" target="_blank" rel="noopener noreferrer" class="link-edital">Documento oficial →</a>`
+        : '<span class="meta-info">Documento externo não informado</span>';
 
     return `
-        <div class="card-oportunidade-rico borda-${vaga.probabilidade}">
+        <div class="card-oportunidade-rico borda-${classeVisual}">
             <div>
                 <div class="card-topo">
-                    <span class="instituicao-badge">${vaga.instituicao} • ${vaga.cidade}/${vaga.estado}</span>
-                    <span class="tag-probabilidade ${cssProb}">${textoProb}</span>
+                    <span class="instituicao-badge">${instituicao} • ${cidade}/${estado}</span>
+                    <span class="tag-probabilidade ${classeTag}">${escapeHtml(textoStatus)}</span>
                 </div>
                 <h3>${titulo}</h3>
-                <p class="meta-info">🎯 <strong>Modalidade:</strong> ${formatarBeneficio(tipo)}</p>
-                <p class="meta-info">📊 <strong>Nota de Corte Estimada:</strong> ${notaCorte}</p>
+                <p class="meta-info">🎯 <strong>Modalidade:</strong> ${tipo}</p>
+                <p class="meta-info">📊 <strong>Nota de Corte de Referência:</strong> ${escapeHtml(notaCorte)}</p>
                 <p class="meta-info">📅 <strong>Prazo Final:</strong> ${prazo}</p>
-                <p class="meta-info">🏠 <strong>República Média:</strong> R$ ${custo} ${vaga.tem_moradia ? "(Possui Moradia Estudantil)" : ""}</p>
-                <p class="meta-info">📏 <strong>Distância em Linha Reta:</strong> ${vaga.distancia_km} km</p>
+                <p class="meta-info">🏠 <strong>República Média:</strong> ${escapeHtml(custo)} · ${escapeHtml(moradia)}</p>
+                <p class="meta-info">📏 <strong>Distância em Linha Reta:</strong> ${escapeHtml(distancia)}</p>
                 <div class="diagnostico-box">
-                    <strong>Triagem do Motor:</strong> ${vaga.diagnostico || "Classificação pendente."}
+                    <strong>Triagem baseada nas regras cadastradas:</strong> ${diagnostico}
                 </div>
-                ${blocoDocumentos}
+                ${alertasLogisticos}
+                ${documentos}
             </div>
             <div class="card-rodape">
                 ${botaoMapa}
-                <a href="${vaga.link_documento || "#"}" class="link-edital">Resumo e Edital →</a>
+                <a href="${urlDetalhe}" class="link-edital">Ver detalhes →</a>
+                ${linkDocumentoHTML}
             </div>
         </div>
     `;

@@ -72,7 +72,7 @@
                 <div class="topo-boas-vindas">
                     <div>
                         <h2 id="nome-estudante">Olá, Estudante!</h2>
-                        <p>Aqui está o cruzamento atualizado do seu perfil com os editais abertos.</p>
+                        <p>Aqui está a triagem do seu perfil conforme as regras cadastradas e seus prazos.</p>
                     </div>
                     <span class="badge-localizacao" id="badge-origem">📍 Origem: Carregando...</span>
                 </div>
@@ -80,19 +80,19 @@
                 <!-- Indicadores Numéricos (KPIs) -->
                 <div class="kpis-grid">
                     <div class="kpi-card">
-                        <div class="kpi-titulo">Modalidades Ativas</div>
+                        <div class="kpi-titulo">Editais avaliados</div>
                         <div class="kpi-valor" id="kpi-universidades">0</div>
                     </div>
                     <div class="kpi-card verde">
-                        <div class="kpi-titulo">Alta Chance (Verdes)</div>
+                        <div class="kpi-titulo">Compatíveis</div>
                         <div class="kpi-valor" id="kpi-verdes">0</div>
                     </div>
                     <div class="kpi-card amarelo">
-                        <div class="kpi-titulo">Média / Atenção (Amarelas)</div>
+                        <div class="kpi-titulo">Dados pendentes</div>
                         <div class="kpi-valor" id="kpi-amarelas">0</div>
                     </div>
                     <div class="kpi-card vermelho">
-                        <div class="kpi-titulo">Improváveis (Vermelhas)</div>
+                        <div class="kpi-titulo">Incompatíveis</div>
                         <div class="kpi-valor" id="kpi-vermelhas">0</div>
                     </div>
                 </div>
@@ -122,23 +122,21 @@
                                 Residência</span>
                             <span class="legenda-item"><i class="ponto-cor" style="background:#28a745;"></i> Alta
                                 Compatibilidade</span>
-                            <span class="legenda-item"><i class="ponto-cor" style="background:#ffc107;"></i> Atenção
-                                (Média)</span>
+                            <span class="legenda-item"><i class="ponto-cor" style="background:#ffc107;"></i> Dados pendentes</span>
                             <span class="legenda-item"><i class="ponto-cor" style="background:#dc3545;"></i>
-                                Improvável</span>
+                                Incompatível</span>
                         </div>
                     </div>
                     <div id="mapa-brasil"></div>
                 </div>
             </div>
 
-            <!-- SEGUNDO CORPO: As 8 Fichas Mais Recentes e Promissoras -->
+            <!-- SEGUNDO CORPO: Oportunidades compatíveis com sua ficha -->
             <div class="secao-cards-recentes">
                 <div class="cabecalho-secao">
                     <div>
-                        <h2 style="color: var(--azul-escuro);">As 8 Oportunidades Mais Promissoras</h2>
-                        <p style="color: var(--texto-mutado); font-size: 0.95rem;">Ordenadas automaticamente pela maior
-                            compatibilidade com a sua ficha e urgência de prazo.</p>
+                        <h2 style="color: var(--azul-escuro);">Oportunidades compatíveis com sua ficha</h2>
+                        <p style="color: var(--texto-mutado); font-size: 0.95rem;">Ordenadas pelos critérios cadastrados e pela vigência das regras. O resultado é uma triagem informativa, não uma garantia de aprovação.</p>
                     </div>
                     <button class="btn-primario" onclick="trocarAba('aba-historico')"
                         style="background: var(--azul-claro); color: var(--azul-primario);">Ver Todos os Editais
@@ -172,10 +170,12 @@
                     <div>
                         <label for="filtro-chance">Compatibilidade</label>
                         <select id="filtro-chance" onchange="aplicarFiltrosHistorico()">
-                            <option value="TODAS">Todas as Chances</option>
-                            <option value="ALTA">🟢 Alta Compatibilidade</option>
-                            <option value="MEDIA">🟡 Média / Atenção</option>
-                            <option value="BAIXA">🔴 Improvável</option>
+                            <option value="TODAS">Todas as classificações</option>
+                            <option value="COMPATIVEL">🟢 Compatível</option>
+                            <option value="PENDENTE">🟡 Dados pendentes</option>
+                            <option value="INCOMPATIVEL">🔴 Incompatível</option>
+                            <option value="AGUARDANDO_ABERTURA">🔵 Aguardando abertura</option>
+                            <option value="ENCERRADO">⚫ Encerrado</option>
                         </select>
                     </div>
                     <div>
@@ -247,14 +247,17 @@
 
                     <div class="form-linha">
                         <div class="form-group">
-                            <label for="etnia">Autodeclaração Étnico-Racial <span style="color:#dc3545">*</span></label>
-                            <select id="etnia" name="etnia" required>
+                            <label for="raca_cor">Autodeclaração de raça/cor <span style="color:#dc3545">*</span></label>
+                            <select id="raca_cor" name="raca_cor" required>
                                 <option value="" disabled selected>Selecione uma opção...</option>
-                                <option value="NAO_DECLARADO">Prefiro não declarar / Ampla</option>
-                                <option value="PPI">Preto, Pardo ou Indígena (PPI)</option>
-                                <option value="BRANCO">Branco</option>
-                                <option value="AMARELO">Amarelo</option>
+                                <option value="BRANCA">Branca</option>
+                                <option value="PRETA">Preta</option>
+                                <option value="PARDA">Parda</option>
+                                <option value="AMARELA">Amarela</option>
+                                <option value="INDIGENA">Indígena</option>
+                                <option value="NAO_INFORMAR">Prefiro não informar</option>
                             </select>
+                            <small>Essa informação é armazenada criptografada e só é utilizada para verificar critérios pertinentes.</small>
                         </div>
                         <div class="form-group">
                             <label for="nota_media_enem">Média Estimada (ENEM, Provão Paulista ou Vestibular) <span style="color:#dc3545">*</span></label>

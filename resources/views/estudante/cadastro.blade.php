@@ -51,7 +51,7 @@
 
             <div class="form-group" style="position: relative;">
                 <label for="password">Senha</label>
-                <input type="password" id="password" name="password" required minlength="6" placeholder="••••••••" style="padding-right: 40px;">
+                <input type="password" id="password" name="password" required minlength="10" placeholder="Mínimo de 10 caracteres" style="padding-right: 40px;">
                 <button type="button" onclick="toggleSenha('password', 'icone_senha_1')" style="position: absolute; right: 10px; top: 32px; background: none; border: none; cursor: pointer; padding: 2px;">
                     <img src="{{ asset('assets/img/ver_senha.svg') }}" id="icone_senha_1" alt="Mostrar Senha" style="width: 40px; height: 40px; opacity: 0.6;">
                 </button>
@@ -59,7 +59,7 @@
 
             <div class="form-group" style="position: relative;">
                 <label for="password_confirmation">Confirmar Senha</label>
-                <input type="password" id="password_confirmation" name="password_confirmation" required minlength="6" placeholder="••••••••" style="padding-right: 40px;">
+                <input type="password" id="password_confirmation" name="password_confirmation" required minlength="10" placeholder="Mínimo de 10 caracteres" style="padding-right: 40px;">
                 <button type="button" onclick="toggleSenha('password_confirmation', 'icone_senha_2')" style="position: absolute; right: 10px; top: 32px; background: none; border: none; cursor: pointer; padding: 2px;">
                     <img src="{{ asset('assets/img/ver_senha.svg') }}" id="icone_senha_2" alt="Mostrar Senha" style="width: 40px; height: 40px; opacity: 0.6;">
                 </button>
@@ -79,14 +79,6 @@
 
         </form>
     </div>
-
-    <script>
-        document.getElementById('form-cadastro-laravel').addEventListener('submit', function () {
-            const btn = document.getElementById('btn-registrar');
-            btn.textContent = 'Criando conta...';
-            btn.disabled = true;
-        });
-    </script>
 
     <script>
         function toggleSenha(inputId, iconeId) {

@@ -3,42 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNILEGI - Diretoria</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>SCOM - Gestão de usuários</title>
     <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
-        .admin-navbar { background-color: var(--azul-escuro); color: white; border-bottom: 3px solid #dc3545; }
-        .admin-navbar .logo, .admin-navbar a { color: white; }
-        .painel-container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; }
-        .btn-sair-admin { background: transparent; border: 1px solid white; color: white; padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: 0.3s; }
-        .btn-sair-admin:hover { background: #dc3545; border-color: #dc3545; }
-        .badge-diretor { background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; vertical-align: middle; margin-left: 10px; }
+        body { background: #f5f7fa; color: #172033; }
+        .painel { max-width: 1100px; margin: 30px auto; padding: 0 18px; }
+        .cartao { background: #fff; border: 1px solid #dce2ea; border-radius: 10px; padding: 20px; margin-bottom: 18px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; } th, td { padding: 11px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 3px; }
+        button { padding: 8px 12px; border: 0; border-radius: 6px; cursor: pointer; background: #174a80; color: #fff; }
+        .mensagem { padding: 12px; border-radius: 6px; margin-bottom: 15px; background: #e5f7eb; }
+        .erro { color: #a11; margin: 8px 0; }
+        .cabecalho { background: #172f50; color: #fff; padding: 16px 4%; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .cabecalho form { margin: 0; } .cabecalho button { background: transparent; border: 1px solid #fff; }
     </style>
 </head>
 <body>
-    <header class="navbar admin-navbar">
-        <div class="logo">
-            <img src="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}" alt="Logo UNILEGI" class="logo-img" style="filter: brightness(0) invert(1); height: 40px;">
-            <span>UNILEGI <span class="badge-diretor">DIRETOR</span></span>
-        </div>
-        <nav>
-            <ul>
-                <li><span>Olá, {{ auth()->user()->nome }}</span></li>
-                <li>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-                        @csrf
-                        <button type="submit" class="btn-sair-admin">Sair do Painel</button>
-                    </form>
-                </li>
-            </ul>
-        </nav>
-    </header>
-
-    <main class="painel-container">
-        <h2>Painel de Controle da Diretoria</h2>
-        <hr style="border: 0; height: 1px; background: #ccc; margin: 20px 0;">
-        <p>Bem-vindo, <strong>{{ auth()->user()->nome }}</strong>. Autenticação RBAC de Diretor validada com sucesso.</p>
-    </main>
+<header class="cabecalho">
+    <div><strong>SCOM · Diretoria</strong><br><small>Administração de contas e permissões</small></div>
+    <div>{{ auth()->user()->nome }}
+        <form method="POST" action="{{ route('logout') }}" style="display:inline">@csrf<button type="submit">Sair</button></form>
+    </div>
+</header>
+<main class="painel">
+    @if (session('status')) <div class="mensagem" role="status">{{ session('status') }}</div> @endif
+    @if ($errors->any()) <div class="cartao erro" role="alert"><ul>@foreach ($errors->all() as $erro)<li>{{ $erro }}</li>@endforeach</ul></div> @endif
+    <section class="cartao">
+        <h1>Contas cadastradas</h1>
+        <p>O cadastro público cria apenas estudantes. A diretoria pode promover estudantes a coordenadores, rebaixá-los e ativar ou banir contas. Contas de diretoria não são alteradas nesta tela.</p>
+        <table>
+            <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody>
+            @forelse ($usuarios as $usuario)
+                <tr>
+                    <td>{{ $usuario->nome }}</td>
+                    <td>{{ $usuario->email }}</td>
+                    <td>{{ $usuario->tipo_perfil }}</td>
+                    <td>{{ $usuario->status_conta }}</td>
+                    <td>
+                        @if ($usuario->tipo_perfil !== 'DIRETOR' && $usuario->id !== auth()->id())
+                            <form method="POST" action="{{ route('diretoria.usuarios.atualizar', $usuario) }}">
+                                @csrf @method('PATCH')
+                                <select name="tipo_perfil" aria-label="Perfil de {{ $usuario->nome }}">
+                                    <option value="ESTUDANTE" @selected($usuario->tipo_perfil === 'ESTUDANTE')>ESTUDANTE</option>
+                                    <option value="COORDENADOR" @selected($usuario->tipo_perfil === 'COORDENADOR')>COORDENADOR</option>
+                                </select>
+                                <select name="status_conta" aria-label="Status de {{ $usuario->nome }}">
+                                    <option value="ATIVA" @selected($usuario->status_conta === 'ATIVA')>ATIVA</option>
+                                    <option value="BANIDA" @selected($usuario->status_conta === 'BANIDA')>BANIDA</option>
+                                </select>
+                                <button type="submit">Salvar</button>
+                            </form>
+                        @else
+                            <small>Conta protegida</small>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="5">Nenhuma conta cadastrada.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+        {{ $usuarios->links() }}
+    </section>
+</main>
 </body>
 </html>
