@@ -10,7 +10,6 @@
     <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/UNIELEGI logo.jpg') }}">
     
     <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
-    <script src="{{ asset('assets/js/engine.js') }}" defer></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -42,7 +41,7 @@
             <p class="slogan">Mentoria e integração universitária de confiança há 0 anos.</p>
             <p class="sub-slogan">Descubra cotas, isenções e oportunidades de forma simples, direta e sem burocracia.</p>
             
-            <a href="{{ route('login') }}" class="btn-primario">Descubra Suas Chances</a>
+            <a href="{{ route('login') }}" class="btn-primario">Consulte Oportunidades</a>
         </div>
     </section>
 
@@ -58,7 +57,7 @@
             <p>A UNILEGI nasceu para ser a sua bússola. Diferente das soluções existentes, nós não somos apenas um calendário ou buscador de notícias. Construímos um sistema inteligente que cruza o perfil socioeconômico com os critérios de cada universidade.</p>
             <p>Em vez de entregar PDFs de 50 páginas, nós entregamos um plano de ação claro, dedicado <b>especialmente para você</b>.
 
-            Clique em <b>"Descubra Suas Chances"</b> no topo da página e veja quais oportunidades você pode acessar hoje mesmo.
+            Clique em <b>"Consulte Oportunidades"</b> no topo da página e consulte as oportunidades e os critérios registrados no sistema.
             </p>
         </div>
     </section>

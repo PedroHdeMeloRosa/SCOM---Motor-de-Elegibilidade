@@ -1,37 +1,20 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Migration histórica substituída pela baseline com a estrutura oficial
+     * da tabela editais (nome_processo, custo_medio_republica etc.).
      */
     public function up(): void
     {
-        Schema::create('editais', function (Blueprint $table) {
-            $table->id();
-            $table->string('instituicao');
-            $table->string('titulo');
-            $table->string('cidade');
-            $table->string('estado', 2);
-            $table->decimal('latitude', 10, 7);
-            $table->decimal('longitude', 10, 7);
-            $table->date('prazo_limite');
-            $table->decimal('custo_moradia_estimado', 8, 2)->nullable();
-            $table->string('tipo_vaga'); // Ex: 'Moradia', 'Bolsa Permanência'
-            $table->string('escopo_geografico'); // Ex: 'LOCAL', 'ESTADUAL'
-            $table->timestamps();
-        });
+        // A tabela editais é criada pela migration baseline quando necessário.
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('editals');
+        // Nunca apagar a tabela editais por rollback desta migration antiga.
     }
 };

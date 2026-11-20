@@ -44,6 +44,7 @@ extension=curl
 extension=mbstring
 extension=openssl
 extension=pdo_mysql
+extension=pdo_sqlite
 extension=fileinfo
 extension=zip
 ```
@@ -74,6 +75,7 @@ cd SCOM---Motor-de-Elegibilidade
 composer install
 npm ci
 Copy-Item .env.example .env
+# Somente em instalação nova e isolada, com APP_KEY vazia:
 php artisan key:generate
 ```
 
@@ -83,26 +85,21 @@ php artisan key:generate
 
 ## 5. Banco de dados
 
-1. Inicie o serviço MySQL/MariaDB pelo XAMPP.
-2. Crie um banco chamado `scom`.
-3. Configure o `.env`:
+O banco legado oficial utilizado no desenvolvimento é `motor_elegibilidade`. Ele já contém as tabelas `cadastros`, `perfis_estudantes`, `editais`, `regras_elegibilidade`, `comentarios` e `historico_retificacoes`. Não crie um banco `scom` vazio para substituir essa base e não importe novamente o dump SQL sobre dados existentes.
 
-```dotenv
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=scom
-DB_USERNAME=root
-DB_PASSWORD=
-```
+Antes de qualquer alteração estrutural:
 
-Ajuste usuário e senha conforme a instalação local. Depois execute:
+1. Exporte o banco `motor_elegibilidade` pelo phpMyAdmin.
+2. Confira que o backup foi baixado e pode ser aberto.
+3. Confira `DB_DATABASE` no `.env` sem compartilhar o conteúdo do arquivo.
+4. Revise as migrations e o estado com `php artisan migrate:status`.
+5. Execute migrations somente após revisão e backup. Nunca utilize `migrate:fresh`, `db:wipe` ou `migrate:rollback` na base legada.
 
-```powershell
-php artisan migrate
-```
+Em uma instalação nova, depois de revisar backup/conexão e executar as migrations, crie a primeira conta administrativa pelo comando interativo `php artisan scom:criar-diretor`. O comando recusa criar outra conta se já existir um diretor.
 
-As migrations são a fonte oficial da estrutura do banco. Não é necessário criar as tabelas manualmente no phpMyAdmin.
+Para testes automatizados, `phpunit.xml` configura SQLite em memória (`:memory:`). Os testes devem criar seu próprio esquema de teste; nunca devem se conectar a `motor_elegibilidade`. É necessário que a extensão `pdo_sqlite` esteja habilitada no PHP CLI.
+
+A coluna `perfis_estudantes.raca_cor` usa o cast `encrypted` do Laravel. Preserve a `APP_KEY` em backup protegido e nunca a versione. Se duas instalações acessarem a mesma base com dados já cifrados, ambas precisam receber a mesma chave por um canal seguro de gestão de segredos; não é seguro enviar a chave pelo Git, e chaves diferentes não conseguem ler os mesmos valores. Não execute `key:generate` sobre uma instalação que já tenha valores criptografados sem um plano de recriptografia.
 
 ## 6. Iniciar e testar
 

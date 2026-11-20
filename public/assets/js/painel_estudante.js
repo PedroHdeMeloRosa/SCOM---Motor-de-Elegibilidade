@@ -24,6 +24,35 @@ function getCsrfToken() {
     return meta ? meta.content : "";
 }
 
+// Valores vindos do banco/API nunca devem ser interpolados em HTML sem escape.
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+}
+
+function safeDocumentUrl(value) {
+    const raw = String(value ?? "").trim();
+    if (!/^https?:\/\//i.test(raw)) return "";
+    try {
+        const url = new URL(raw);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+    } catch {
+        return "";
+    }
+}
+
+function rotuloElegibilidade(status) {
+    return ({
+        COMPATIVEL: "Compatível com os critérios cadastrados",
+        INCOMPATIVEL: "Incompatível com um ou mais critérios",
+        PENDENTE: "Dados insuficientes para concluir",
+        AGUARDANDO_ABERTURA: "Inscrições ainda não iniciadas",
+        ENCERRADO: "Prazo encerrado",
+        REGRA_INVALIDA: "Regra precisa de revisão"
+    })[status] || "Classificação não disponível";
+}
+
 // ==============================================================================
 // INICIALIZAÇÃO
 // ==============================================================================
@@ -78,38 +107,50 @@ function trocarAba(idAba) {
 // ==============================================================================
 async function carregarDadosPainel() {
     try {
-        const resposta = await fetch("/api/estudante/painel");
+        const resposta = await fetch("/api/estudante/painel", {
+            headers: { "Accept": "application/json" }
+        });
+        if (resposta.status === 401) {
+            window.location.href = "/login";
+            return;
+        }
         const json = await resposta.json();
 
         if (!json.sucesso) throw new Error(json.mensagem);
 
-        todasOportunidades = json.oportunidades;
-        dadosPerfil = json.perfil;
+        todasOportunidades = json.oportunidades || [];
+        dadosPerfil = json.perfil || {};
 
         document.getElementById("nome-estudante").textContent = `Olá, ${json.usuario}!`;
-        document.getElementById("badge-origem").textContent = `📍 Origem: ${dadosPerfil.cidade_origem} - ${dadosPerfil.estado_origem} (Raio 2km)`;
+
+        if (json.ficha_completa && dadosPerfil.cidade_origem && dadosPerfil.estado_origem) {
+            document.getElementById("badge-origem").textContent = `📍 Origem: ${dadosPerfil.cidade_origem} - ${dadosPerfil.estado_origem}`;
+        } else {
+            document.getElementById("badge-origem").textContent = `📍 Origem: Preencha sua Ficha Socioeconômica`;
+        }
+
         document.getElementById("kpi-universidades").textContent = json.kpis.total_universidades;
         document.getElementById("kpi-verdes").textContent = json.kpis.verdes;
         document.getElementById("kpi-amarelas").textContent = json.kpis.amarelas;
         document.getElementById("kpi-vermelhas").textContent = json.kpis.vermelhas;
 
-        preencherFormularioPerfil(dadosPerfil);
+        await preencherFormularioPerfil(dadosPerfil);
         renderizarGraficos(json.kpis, todasOportunidades);
 
-        // TOP 8 DO DASHBOARD: Filtra expirados, ordena por prioridade e depois por data
-        const pesosProb = { ALTA: 1, MEDIA: 2, BAIXA: 3 };
-        const vagasAtivas = todasOportunidades.filter(v => v.probabilidade !== 'EXPIRADO');
-        
+        // TOP 8 DO DASHBOARD: Filtra expirados, ordena por prioridade e depois por prazo mais urgente
+        const pesosStatus = { COMPATIVEL: 1, PENDENTE: 2, AGUARDANDO_ABERTURA: 3, INCOMPATIVEL: 4, ENCERRADO: 5 };
+        const vagasAtivas = todasOportunidades.filter(v => v.status_elegibilidade !== 'ENCERRADO');
+
         const top8 = [...vagasAtivas].sort((a, b) => {
-            if (pesosProb[a.probabilidade] !== pesosProb[b.probabilidade]) {
-                return pesosProb[a.probabilidade] - pesosProb[b.probabilidade];
-            }
+            const pesoA = pesosStatus[a.status_elegibilidade] ?? 99;
+            const pesoB = pesosStatus[b.status_elegibilidade] ?? 99;
+            if (pesoA !== pesoB) return pesoA - pesoB;
             return new Date(a.prazo_limite || a.prazo_fim) - new Date(b.prazo_limite || b.prazo_fim);
         }).slice(0, 8);
 
-        renderizarMapaBrasil(dadosPerfil, top8); // Mostra apenas as top 8 no mapa
-        renderizarTop8Cards(top8);
-        aplicarFiltrosHistorico(); // Renderiza o histórico com os grupos
+        renderizarMapaBrasil(dadosPerfil, top8);
+        renderizarTop8Cards(top8, json.ficha_completa);
+        aplicarFiltrosHistorico(json.ficha_completa);
         inicializarSuperCalendario();
 
     } catch (erro) {
@@ -135,9 +176,9 @@ async function salvarFichaSocioeconomica(evento) {
     const dadosFicha = {
         renda_per_capita: document.getElementById("renda_per_capita").value,
         tipo_escola: document.getElementById("tipo_escola").value,
-        etnia: document.getElementById("etnia").value,
+        raca_cor: document.getElementById("raca_cor").value,
         nota_media_enem: document.getElementById("nota_media_enem").value,
-        cep: document.getElementById("cep").value,
+        cep: document.getElementById("cep").value.trim(), // Opcional
         cidade_origem: document.getElementById("cidade_origem").value,
         estado_origem: document.getElementById("estado_origem").value,
         lat_origem: document.getElementById("lat_origem").value,
@@ -152,45 +193,60 @@ async function salvarFichaSocioeconomica(evento) {
     try {
         const resposta = await fetch("/api/estudante/ficha", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": getCsrfToken() },
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": getCsrfToken()
+            },
             body: JSON.stringify(dadosFicha)
         });
 
         const json = await resposta.json();
 
-        if (json.sucesso) {
+        if (resposta.ok && json.sucesso) {
             fichaModificada = false;
             alerta.style.display = "block";
             alerta.style.backgroundColor = "#dcfce7";
             alerta.style.color = "#166534";
             alerta.textContent = "✅ " + json.mensagem + " Clique em 'Voltar ao Mapa' para ver os resultados.";
             await carregarDadosPainel();
+        } else {
+            throw new Error(json.message || json.mensagem || "Falha na validação dos dados.");
         }
     } catch (erro) {
         alerta.style.display = "block";
         alerta.style.backgroundColor = "#fee2e2";
         alerta.style.color = "#991b1b";
-        alerta.textContent = "❌ Ocorreu um erro ao salvar a ficha. Tente novamente.";
+        alerta.textContent = "❌ " + (erro.message || "Ocorreu um erro ao salvar a ficha. Verifique os campos obrigatórios.");
     } finally {
-        btnSalvar.textContent = "💾 Salvar Ficha e Recalcular Rotas (Permanece nesta tela)";
+        btnSalvar.textContent = "💾 Salvar Dados e Rever Oportunidades";
         btnSalvar.disabled = false;
     }
 }
 
 async function fazerLogout() {
-    try { await fetch("/logout", { method: "POST", headers: { "X-CSRF-TOKEN": getCsrfToken() } }); }
+    try {
+        await fetch("/logout", {
+            method: "POST",
+            headers: { "Accept": "application/json", "X-CSRF-TOKEN": getCsrfToken() }
+        });
+    }
     finally { window.location.href = "/login"; }
 }
 
 // ==============================================================================
-// BUSCA DE ENDEREÇO (IBGE E VIA CEP)
+// BUSCA DE ENDEREÇO: CEP OPCIONAL -> ESTADO/CIDADE (SEM BLOQUEIO)
 // ==============================================================================
 async function preencherFormularioPerfil(perfil) {
-    if (!perfil) return;
-    document.getElementById("renda_per_capita").value = perfil.renda_per_capita || "";
+    if (!perfil || Object.keys(perfil).length === 0) {
+        fichaModificada = false;
+        return;
+    }
+
+    document.getElementById("renda_per_capita").value = perfil.renda_per_capita ?? "";
     document.getElementById("tipo_escola").value = perfil.tipo_escola || "";
-    document.getElementById("etnia").value = perfil.etnia || "";
-    document.getElementById("nota_media_enem").value = perfil.nota_media_enem || "";
+    document.getElementById("raca_cor").value = perfil.raca_cor || "";
+    document.getElementById("nota_media_enem").value = perfil.nota_media_enem ?? "";
     document.getElementById("cep").value = perfil.cep || "";
 
     if (perfil.estado_origem) {
@@ -198,10 +254,10 @@ async function preencherFormularioPerfil(perfil) {
         await carregarCidadesPorUF(perfil.estado_origem, perfil.cidade_origem);
     }
 
-    document.getElementById("lat_origem").value = perfil.lat_origem || "";
-    document.getElementById("lng_origem").value = perfil.lng_origem || "";
+    document.getElementById("lat_origem").value = perfil.lat_origem ?? "";
+    document.getElementById("lng_origem").value = perfil.lng_origem ?? "";
     document.getElementById("nivel_mobilidade").value = perfil.nivel_mobilidade || "";
-    document.getElementById("orcamento_moradia").value = perfil.orcamento_moradia || "";
+    document.getElementById("orcamento_moradia").value = perfil.orcamento_moradia ?? "";
     document.getElementById("interesse_republica").checked = Boolean(Number(perfil.interesse_republica));
     document.getElementById("precisa_auxilio_moradia").checked = Boolean(Number(perfil.precisa_auxilio_moradia));
     document.getElementById("pcd").checked = Boolean(Number(perfil.pcd));
@@ -220,7 +276,9 @@ async function carregarCidadesPorUF(uf, cidadePreSelecionada = null) {
             const option = document.createElement("option");
             option.value = m.nome;
             option.textContent = m.nome;
-            if (cidadePreSelecionada && m.nome.toLowerCase() === cidadePreSelecionada.toLowerCase()) option.selected = true;
+            if (cidadePreSelecionada && m.nome.toLowerCase() === cidadePreSelecionada.toLowerCase()) {
+                option.selected = true;
+            }
             selectCidade.appendChild(option);
         });
     } catch (e) {
@@ -230,94 +288,101 @@ async function carregarCidadesPorUF(uf, cidadePreSelecionada = null) {
 
 async function aoMudarEstado(uf) {
     await carregarCidadesPorUF(uf);
+    // Limpa o CEP antigo pois o usuário decidiu trocar o estado manualmente
     document.getElementById("cep").value = "";
     fichaModificada = true;
 }
 
+/**
+ * Quando o usuário seleciona Estado + Cidade, NÃO exigimos nem alteramos o CEP.
+ * Apenas buscamos a Latitude e Longitude da cidade escolhida para posicionar o pino no mapa.
+ */
 async function aoSelecionarCidade() {
     const uf = document.getElementById("estado_origem").value;
     const cidade = document.getElementById("cidade_origem").value;
-    const cepInput = document.getElementById("cep");
     const btnSalvar = document.getElementById("btn-salvar-ficha");
 
     if (!uf || !cidade) return;
+
     buscandoLocalizacao = true;
     btnSalvar.disabled = true;
-    btnSalvar.textContent = "⏳ Sincronizando GPS...";
-    cepInput.value = "Buscando CEP...";
+    btnSalvar.textContent = "⏳ Obtendo coordenadas da cidade...";
 
     try {
         const query = `${cidade}, ${uf}, Brazil`;
-        const resGeo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(query)}`);
+        const resGeo = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
         const dadosGeo = await resGeo.json();
-        let cepEncontrado = "";
 
-        if (dadosGeo.length > 0) {
+        if (Array.isArray(dadosGeo) && dadosGeo.length > 0) {
             document.getElementById("lat_origem").value = dadosGeo[0].lat;
             document.getElementById("lng_origem").value = dadosGeo[0].lon;
-            if (dadosGeo[0].address && dadosGeo[0].address.postcode) cepEncontrado = dadosGeo[0].address.postcode;
         }
-
-        if (!cepEncontrado) {
-            try {
-                const resVia = await fetch(`https://viacep.com.br/ws/${uf}/${encodeURIComponent(cidade)}/Centro/json/`);
-                const listaCeps = await resVia.json();
-                if (Array.isArray(listaCeps) && listaCeps.length > 0 && listaCeps[0].cep) cepEncontrado = listaCeps[0].cep;
-            } catch (_) { }
-        }
-        cepInput.value = cepEncontrado || "00000-000";
         fichaModificada = true;
     } catch (erro) {
-        cepInput.value = "00000-000";
+        console.warn("Não foi possível obter coordenadas exatas da cidade:", erro);
     } finally {
         buscandoLocalizacao = false;
         btnSalvar.disabled = false;
-        btnSalvar.textContent = "💾 Salvar Ficha e Recalcular Rotas (Permanece nesta tela)";
+        btnSalvar.textContent = "💾 Salvar Dados e Rever Oportunidades";
     }
 }
 
+/**
+ * Quando o usuário digita um CEP de 8 dígitos, preenchemos Estado, Cidade e Coordenadas automaticamente.
+ * Se o CEP estiver em branco ou não for encontrado, não trava o formulário.
+ */
 async function buscarCep() {
     const cepInput = document.getElementById("cep");
     const cepLimpo = cepInput.value.replace(/\D/g, "");
-    if (cepLimpo.length !== 8 || cepLimpo === "00000000") return;
+
+    // Se estiver vazio, não faz nada (pois o CEP é opcional)
+    if (cepLimpo.length === 0) return;
+
+    if (cepLimpo.length !== 8 || cepLimpo === "00000000") {
+        cepInput.value = "";
+        cepInput.placeholder = "CEP inválido (use Estado/Cidade)";
+        return;
+    }
 
     const btnSalvar = document.getElementById("btn-salvar-ficha");
     buscandoLocalizacao = true;
     btnSalvar.disabled = true;
-    btnSalvar.textContent = "⏳ Buscando endereço...";
+    btnSalvar.textContent = "⏳ Buscando endereço pelo CEP...";
 
     try {
         const resViaCep = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
         const dadosCep = await resViaCep.json();
-        if (dadosCep.erro) throw new Error("CEP inválido");
+        if (dadosCep.erro) throw new Error("CEP não encontrado");
 
+        // Preenche Estado e Cidade automaticamente a partir do CEP
         document.getElementById("estado_origem").value = dadosCep.uf;
         await carregarCidadesPorUF(dadosCep.uf, dadosCep.localidade);
         cepInput.value = dadosCep.cep || cepLimpo;
 
-        const query = `${dadosCep.logradouro}, ${dadosCep.localidade}, ${dadosCep.uf}, Brazil`;
-        const n = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        // Busca coordenadas geográficas (Lat/Lng) para o mapa
+        const query = `${dadosCep.logradouro ? dadosCep.logradouro + ', ' : ''}${dadosCep.localidade}, ${dadosCep.uf}, Brazil`;
+        const n = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
         const r = await n.json();
 
-        if (r.length > 0) {
+        if (Array.isArray(r) && r.length > 0) {
             document.getElementById("lat_origem").value = r[0].lat;
             document.getElementById("lng_origem").value = r[0].lon;
         } else {
-            const e = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dadosCep.localidade + ", " + dadosCep.uf + ", Brazil")}`);
+            const e = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(dadosCep.localidade + ", " + dadosCep.uf + ", Brazil")}`);
             const a = await e.json();
-            if (a.length > 0) {
+            if (Array.isArray(a) && a.length > 0) {
                 document.getElementById("lat_origem").value = a[0].lat;
                 document.getElementById("lng_origem").value = a[0].lon;
             }
         }
         fichaModificada = true;
-    } catch (a) {
+    } catch (erro) {
         cepInput.value = "";
-        alert("CEP não encontrado. Selecione diretamente na lista de Estados e Cidades ao lado!");
+        cepInput.placeholder = "Não achado. Selecione UF e Cidade!";
     } finally {
         buscandoLocalizacao = false;
         btnSalvar.disabled = false;
-        btnSalvar.textContent = "💾 Salvar Ficha e Recalcular Rotas (Permanece nesta tela)";
+        btnSalvar.textContent = "💾 Salvar Dados e Rever Oportunidades";
     }
 }
 
@@ -325,8 +390,18 @@ async function buscarCep() {
 // MAPA PRINCIPAL (DASHBOARD)
 // ==============================================================================
 function renderizarMapaBrasil(perfil, oportunidades) {
-    const lat = parseFloat(perfil.lat_origem) || -23.5015;
-    const lng = parseFloat(perfil.lng_origem) || -47.4581;
+    const latInformada = perfil?.lat_origem;
+    const lngInformada = perfil?.lng_origem;
+    const latNumero = Number(latInformada);
+    const lngNumero = Number(lngInformada);
+    const temOrigemReal = Boolean(
+        perfil?.cidade_origem && latInformada !== null && latInformada !== undefined && latInformada !== "" &&
+        lngInformada !== null && lngInformada !== undefined && lngInformada !== "" &&
+        Number.isFinite(latNumero) && Number.isFinite(lngNumero) &&
+        latNumero >= -90 && latNumero <= 90 && lngNumero >= -180 && lngNumero <= 180
+    );
+    const lat = temOrigemReal ? latNumero : -15.793889;
+    const lng = temOrigemReal ? lngNumero : -47.882778;
 
     if (mapaLeaflet) {
         camadaElementosMapa.clearLayers();
@@ -344,7 +419,7 @@ function renderizarMapaBrasil(perfil, oportunidades) {
                     e.stopPropagation();
                     document.getElementById('mapa-brasil').classList.toggle('mapa-fullscreen');
                     setTimeout(() => mapaLeaflet.invalidateSize(), 300);
-                }
+                };
                 return container;
             }
         });
@@ -352,52 +427,74 @@ function renderizarMapaBrasil(perfil, oportunidades) {
         mapaLeaflet.on('zoomend', atualizarRadarOrigem);
     }
 
-    limitesGeraisMapa = L.latLngBounds([[lat, lng]]);
+    clearInterval(intervaloRadar);
+    circuloRadarOrigem = null;
+    limitesGeraisMapa = temOrigemReal ? L.latLngBounds([[lat, lng]]) : null;
 
-    const iconePulso = L.divIcon({ className: 'icone-origem-pulso', iconSize: [16, 16] });
-    L.marker([lat, lng], { icon: iconePulso, zIndexOffset: 1000 })
-        .bindPopup(`<b>🏠 Ponto de Partida: ${perfil.cidade_origem}</b>`).addTo(camadaElementosMapa);
+    if (temOrigemReal) {
+        const iconePulso = L.divIcon({ className: 'icone-origem-pulso', iconSize: [16, 16] });
+        L.marker([lat, lng], { icon: iconePulso, zIndexOffset: 1000 })
+            .bindPopup(`<b>🏠 Ponto de Partida: ${escapeHtml(perfil.cidade_origem)}/${escapeHtml(perfil.estado_origem)}</b>`)
+            .addTo(camadaElementosMapa);
 
-    circuloRadarOrigem = L.circle([lat, lng], {
-        color: "#004488", fillColor: "#004488", fillOpacity: 0.2, radius: 25000, weight: 1, interactive: false
-    }).addTo(camadaElementosMapa);
+        circuloRadarOrigem = L.circle([lat, lng], {
+            color: "#004488", fillColor: "#004488", fillOpacity: 0.2, radius: 25000, weight: 1, interactive: false
+        }).addTo(camadaElementosMapa);
+    }
 
     const cores = { ALTA: "#28a745", MEDIA: "#ffc107", BAIXA: "#dc3545", EXPIRADO: "#6c757d" };
     window.rotasDashboard = {};
 
     oportunidades.forEach(vaga => {
-        const cor = cores[vaga.probabilidade] || "#004488";
-        const latVaga = parseFloat(vaga.latitude) || 0;
-        const lngVaga = parseFloat(vaga.longitude) || 0;
+        const cor = cores[vaga.classe_visual] || "#004488";
+        const latVaga = Number(vaga.latitude);
+        const lngVaga = Number(vaga.longitude);
+        if (!Number.isFinite(latVaga) || !Number.isFinite(lngVaga)
+            || latVaga < -90 || latVaga > 90 || lngVaga < -180 || lngVaga > 180) {
+            return;
+        }
 
         const pino = L.circleMarker([latVaga, lngVaga], { color: cor, fillColor: cor, fillOpacity: 0.8, radius: 6, weight: 2 })
-            .bindPopup(`<b>🎓 ${vaga.instituicao} (${vaga.cidade})</b><br>Chance: ${vaga.probabilidade}`);
+            .bindPopup(`<b>🎓 ${escapeHtml(vaga.instituicao)} (${escapeHtml(vaga.cidade)})</b><br>${escapeHtml(formatarBeneficio(vaga.tipo_beneficio))}<br>${escapeHtml(rotuloElegibilidade(vaga.status_elegibilidade))}`);
+        const camadas = [pino];
 
-        const arco = L.polyline(gerarPontosArco([lat, lng], [latVaga, lngVaga]), { color: cor, weight: 2.5, opacity: 0.8, className: "arco-voo" });
+        // Sem coordenadas de origem, mostra o destino, mas não inventa uma linha de deslocamento.
+        if (temOrigemReal) {
+            camadas.push(L.polyline(gerarPontosArco([lat, lng], [latVaga, lngVaga]), {
+                color: cor, weight: 2.5, opacity: 0.8, className: "arco-voo"
+            }));
+        }
 
-        const grupo = L.layerGroup([pino, arco]);
-        grupo.addTo(camadaElementosMapa);
+        const grupo = L.layerGroup(camadas).addTo(camadaElementosMapa);
+        if (limitesGeraisMapa) {
+            limitesGeraisMapa.extend([latVaga, lngVaga]);
+        } else {
+            limitesGeraisMapa = L.latLngBounds([[latVaga, lngVaga]]);
+        }
 
-        limitesGeraisMapa.extend([latVaga, lngVaga]);
-
-        window.rotasDashboard[vaga.id || vaga.id_edital] = {
-            camada: grupo, latDestino: latVaga, lngDestino: lngVaga, latOrigem: lat, lngOrigem: lng
+        const idUnico = vaga.id || vaga.id_regra || vaga.id_edital;
+        window.rotasDashboard[idUnico] = {
+            camada: grupo,
+            latDestino: latVaga,
+            lngDestino: lngVaga,
+            latOrigem: temOrigemReal ? lat : null,
+            lngOrigem: temOrigemReal ? lng : null
         };
     });
 
-    if (oportunidades.length > 0) {
+    if (limitesGeraisMapa && limitesGeraisMapa.isValid()) {
         mapaLeaflet.fitBounds(limitesGeraisMapa, { padding: [40, 40], maxZoom: 8 });
     } else {
-        mapaLeaflet.setView([lat, lng], 6);
+        mapaLeaflet.setView([lat, lng], 4);
     }
     atualizarRadarOrigem();
 }
 
 function atualizarRadarOrigem() {
-    if (!circuloRadarOrigem) return;
+    if (!circuloRadarOrigem || !mapaLeaflet) return;
     const zoomAtual = mapaLeaflet.getZoom();
     clearInterval(intervaloRadar);
-    
+
     if (zoomAtual <= 7) {
         let direcao = 1;
         circuloRadarOrigem.setStyle({ opacity: 0.6, fillOpacity: 0.2 });
@@ -412,22 +509,22 @@ function atualizarRadarOrigem() {
     }
 }
 
-function destacarRotaDashboard(idEdital, botaoCard) {
-    const objRota = window.rotasDashboard[idEdital];
+function destacarRotaDashboard(idRegra, botaoCard) {
+    const objRota = window.rotasDashboard[idRegra];
     if (!objRota) return;
 
-    if (rotaEmDestaqueAtual === idEdital) {
+    if (rotaEmDestaqueAtual === idRegra) {
         Object.values(window.rotasDashboard).forEach(r => {
             if (r.camada) r.camada.getLayers().forEach(l => l.getElement()?.classList.remove('rota-fundo'));
         });
         botaoCard.classList.remove("ativo");
-        botaoCard.innerHTML = "🎯 Destacar Rota";
+        botaoCard.innerHTML = "🎯 Destacar no Mapa";
         rotaEmDestaqueAtual = null;
         mapaLeaflet.fitBounds(limitesGeraisMapa, { padding: [40, 40], maxZoom: 8 });
         return;
     }
 
-    document.querySelectorAll(".btn-destaque").forEach(b => { b.classList.remove("ativo"); b.innerHTML = "🎯 Destacar Rota"; });
+    document.querySelectorAll(".btn-destaque").forEach(b => { b.classList.remove("ativo"); b.innerHTML = "🎯 Destacar no Mapa"; });
 
     Object.values(window.rotasDashboard).forEach(r => {
         if (r.camada) {
@@ -446,10 +543,17 @@ function destacarRotaDashboard(idEdital, botaoCard) {
 
     botaoCard.classList.add("ativo");
     botaoCard.innerHTML = "👁️‍🗨️ Em Destaque";
-    rotaEmDestaqueAtual = idEdital;
+    rotaEmDestaqueAtual = idRegra;
 
-    const limitesDestaque = L.latLngBounds([objRota.latOrigem, objRota.lngOrigem], [objRota.latDestino, objRota.lngDestino]);
-    mapaLeaflet.fitBounds(limitesDestaque, { padding: [60, 60], maxZoom: 7 });
+    if (objRota.latOrigem === null || objRota.lngOrigem === null) {
+        mapaLeaflet.setView([objRota.latDestino, objRota.lngDestino], 8);
+    } else {
+        const limitesDestaque = L.latLngBounds(
+            [objRota.latOrigem, objRota.lngOrigem],
+            [objRota.latDestino, objRota.lngDestino]
+        );
+        mapaLeaflet.fitBounds(limitesDestaque, { padding: [60, 60], maxZoom: 7 });
+    }
     document.getElementById("aba-dashboard").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -462,25 +566,50 @@ function inicializarMapaHistorico() {
     camadaHistorico = L.layerGroup().addTo(mapaHistorico);
 }
 
-function focarRotaHistorico(idEdital) {
-    const vaga = todasOportunidades.find(o => o.id == idEdital || o.id_edital == idEdital);
+function focarRotaHistorico(idRegra) {
+    const vaga = todasOportunidades.find(o => (o.id || o.id_regra || o.id_edital) == idRegra);
     if (!vaga) return;
 
     if (!camadaHistorico) inicializarMapaHistorico();
     camadaHistorico.clearLayers();
 
-    const latO = parseFloat(dadosPerfil.lat_origem);
-    const lngO = parseFloat(dadosPerfil.lng_origem);
-    const latV = parseFloat(vaga.latitude);
-    const lngV = parseFloat(vaga.longitude);
+    const latV = Number(vaga.latitude);
+    const lngV = Number(vaga.longitude);
+    if (!Number.isFinite(latV) || !Number.isFinite(lngV)
+        || latV < -90 || latV > 90 || lngV < -180 || lngV > 180) {
+        return;
+    }
 
-    L.circle([latO, lngO], { color: "#004488", fillColor: "#004488", fillOpacity: 0.5, radius: 2000 }).addTo(camadaHistorico);
-    const cor = { ALTA: "#28a745", MEDIA: "#ffc107", BAIXA: "#dc3545", EXPIRADO: "#6c757d" }[vaga.probabilidade] || "#004488";
-    L.circle([latV, lngV], { color: cor, fillColor: cor, fillOpacity: 0.5, radius: 2000 }).addTo(camadaHistorico);
-    
-    L.polyline(gerarPontosArco([latO, lngO], [latV, lngV]), { color: cor, weight: 3, className: "arco-voo" }).addTo(camadaHistorico);
+    const cor = { ALTA: "#28a745", MEDIA: "#ffc107", BAIXA: "#dc3545", EXPIRADO: "#6c757d" }[vaga.classe_visual] || "#004488";
+    L.circle([latV, lngV], { color: cor, fillColor: cor, fillOpacity: 0.5, radius: 2000 })
+        .bindPopup(`<b>🎓 ${escapeHtml(vaga.instituicao)} (${escapeHtml(vaga.cidade)})</b>`)
+        .addTo(camadaHistorico);
 
-    mapaHistorico.fitBounds(L.latLngBounds([latO, lngO], [latV, lngV]), { padding: [50, 50], maxZoom: 10 });
+    const latOrigemInformada = dadosPerfil.lat_origem;
+    const lngOrigemInformada = dadosPerfil.lng_origem;
+    const origemInformada = latOrigemInformada !== null && latOrigemInformada !== undefined && latOrigemInformada !== ''
+        && lngOrigemInformada !== null && lngOrigemInformada !== undefined && lngOrigemInformada !== '';
+
+    if (origemInformada) {
+        const latO = Number(latOrigemInformada);
+        const lngO = Number(lngOrigemInformada);
+        const origemValida = Number.isFinite(latO) && Number.isFinite(lngO)
+            && latO >= -90 && latO <= 90 && lngO >= -180 && lngO <= 180;
+
+        if (origemValida) {
+            L.circle([latO, lngO], { color: "#004488", fillColor: "#004488", fillOpacity: 0.5, radius: 2000 })
+                .addTo(camadaHistorico);
+            L.polyline(gerarPontosArco([latO, lngO], [latV, lngV]), {
+                color: cor, weight: 3, className: "arco-voo"
+            }).addTo(camadaHistorico);
+            mapaHistorico.fitBounds(L.latLngBounds([latO, lngO], [latV, lngV]), { padding: [50, 50], maxZoom: 10 });
+        } else {
+            mapaHistorico.setView([latV, lngV], 8);
+        }
+    } else {
+        mapaHistorico.setView([latV, lngV], 8);
+    }
+
     document.getElementById("mapa-container-historico").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -505,9 +634,11 @@ function inicializarSuperCalendario() {
     const inputData = document.getElementById("filtro-prazo");
     const btnLimpar = document.getElementById("btn-limpar-data");
     const divLegenda = document.getElementById("legenda-datas");
-    if (!inputData) return;
+    if (!inputData || typeof flatpickr === "undefined") return;
 
     const datasComEditais = todasOportunidades.map(v => v.prazo_limite || v.prazo_fim).filter(d => d);
+
+    if (superCalendario) superCalendario.destroy();
 
     superCalendario = flatpickr(inputData, {
         locale: "pt",
@@ -528,8 +659,8 @@ function inicializarSuperCalendario() {
                 btnLimpar.style.display = "block";
                 const editaisNoDia = todasOportunidades.filter(v => (v.prazo_limite || v.prazo_fim) === dateStr);
                 if (editaisNoDia.length > 0) {
-                    const nomes = editaisNoDia.map(e => e.instituicao.split(' ')[0]).join(', ');
-                    divLegenda.innerHTML = `⚠️ Encerram neste dia: <b>${nomes}</b>`;
+                    const nomes = editaisNoDia.map(e => String(e.instituicao || "Instituição").split(' ')[0]).join(', ');
+                    divLegenda.innerHTML = `⚠️ Encerram neste dia: <b>${escapeHtml(nomes)}</b>`;
                     divLegenda.style.color = "#004488";
                 } else {
                     divLegenda.innerHTML = `Mostrando editais até o dia selecionado.`;
@@ -540,20 +671,20 @@ function inicializarSuperCalendario() {
                 btnLimpar.style.display = "none";
                 divLegenda.style.display = "none";
             }
-            aplicarFiltrosHistorico();
+            aplicarFiltrosHistorico(true);
         }
     });
 
-    btnLimpar.addEventListener("click", () => {
+    btnLimpar.onclick = () => {
         superCalendario.clear();
         btnLimpar.style.display = "none";
         divLegenda.style.display = "none";
-        aplicarFiltrosHistorico();
-    });
+        aplicarFiltrosHistorico(true);
+    };
 }
 
 // ==============================================================================
-// GRÁFICOS, RENDERIZAÇÃO DE CARDS E FILTROS HISTÓRICOS (COM GRUPOS)
+// GRÁFICOS, RENDERIZAÇÃO DE CARDS E FILTROS HISTÓRICOS
 // ==============================================================================
 function renderizarGraficos(kpis, oportunidades) {
     const ctxPizza = document.getElementById("graficoPizza").getContext("2d");
@@ -564,7 +695,7 @@ function renderizarGraficos(kpis, oportunidades) {
     chartPizza = new Chart(ctxPizza, {
         type: "doughnut",
         data: {
-            labels: ["Alta Chance", "Atenção", "Improvável"],
+            labels: ["Compatível", "Dados pendentes", "Incompatível"],
             datasets: [{
                 data: [kpis.verdes, kpis.amarelas, kpis.vermelhas],
                 backgroundColor: ["#28a745", "#ffc107", "#dc3545"]
@@ -575,7 +706,7 @@ function renderizarGraficos(kpis, oportunidades) {
 
     const contagemTipos = {};
     oportunidades.forEach(vaga => {
-        if (vaga.probabilidade !== 'EXPIRADO') {
+        if (vaga.status_elegibilidade !== 'ENCERRADO') {
             const tipo = formatarBeneficio(vaga.tipo_beneficio || vaga.tipo_vaga);
             contagemTipos[tipo] = (contagemTipos[tipo] || 0) + 1;
         }
@@ -585,7 +716,7 @@ function renderizarGraficos(kpis, oportunidades) {
         type: "bar",
         data: {
             labels: Object.keys(contagemTipos),
-            datasets: [{ label: "Qtd. Editais", data: Object.values(contagemTipos), backgroundColor: "#004488", borderRadius: 6 }]
+            datasets: [{ label: "Qtd. Modalidades", data: Object.values(contagemTipos), backgroundColor: "#004488", borderRadius: 6 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
@@ -594,11 +725,34 @@ function renderizarGraficos(kpis, oportunidades) {
     });
 }
 
-function renderizarTop8Cards(lista) {
-    document.getElementById("grid-top-8").innerHTML = lista.map(vaga => montarCardHTML(vaga, "dashboard")).join("");
+function renderizarTop8Cards(lista, fichaCompleta = true) {
+    const grid = document.getElementById("grid-top-8");
+    if (!fichaCompleta) {
+        grid.innerHTML = `
+            <div class="estado-vazio">
+                <p>Sua ficha socioeconômica ainda está vazia. Preencha seus dados para destravar o cálculo de elegibilidade e o radar geográfico!</p>
+                <br>
+                <button class="btn-primario" style="background: var(--azul-primario); color: white;" onclick="trocarAba('aba-ficha')">📝 Preencher Minha Ficha Agora</button>
+            </div>
+        `;
+        return;
+    }
+
+    if (lista.length === 0) {
+        grid.innerHTML = '<div class="estado-vazio"><p>Nenhuma modalidade ativa encontrada no momento.</p></div>';
+        return;
+    }
+
+    grid.innerHTML = lista.map(vaga => montarCardHTML(vaga, "dashboard")).join("");
 }
 
-function aplicarFiltrosHistorico() {
+function aplicarFiltrosHistorico(fichaCompleta = true) {
+    const grid = document.getElementById("grid-historico-completo");
+    if (!fichaCompleta && todasOportunidades.length === 0) {
+        grid.innerHTML = '<div class="estado-vazio"><p>Preencha sua Ficha Socioeconômica na terceira aba para consultar o histórico analisado.</p></div>';
+        return;
+    }
+
     const pChance = document.getElementById("filtro-chance").value;
     const pEscopo = document.getElementById("filtro-escopo").value;
     const pOrcamento = parseFloat(document.getElementById("filtro-orcamento").value);
@@ -606,16 +760,9 @@ function aplicarFiltrosHistorico() {
     const inputOcultoData = document.querySelector("#filtro-prazo")._flatpickr;
     const pPrazo = inputOcultoData ? inputOcultoData.selectedDates[0] : null;
 
-    const ufAluno = document.getElementById("estado_origem").value || dadosPerfil.estado_origem;
-    const cidadeAluno = document.getElementById("cidade_origem").value || dadosPerfil.cidade_origem;
-
     const filtrados = todasOportunidades.filter(vaga => {
-        const condChance = pChance === "TODAS" || vaga.probabilidade === pChance;
-
-        let condEscopo = true;
-        if (pEscopo === "LOCAL") condEscopo = (vaga.cidade === cidadeAluno) && (vaga.estado === ufAluno);
-        else if (pEscopo === "ESTADUAL") condEscopo = (vaga.estado === ufAluno);
-        else if (pEscopo === "INTERESTADUAL") condEscopo = (vaga.estado !== ufAluno);
+        const condChance = pChance === "TODAS" || vaga.status_elegibilidade === pChance;
+        const condEscopo = pEscopo === "TODOS" || (vaga.escopo_geografico || vaga.escopo_mobilidade) === pEscopo;
 
         let condPrazo = true;
         if (pPrazo) {
@@ -626,84 +773,111 @@ function aplicarFiltrosHistorico() {
             condPrazo = dataEdital <= dataFiltro;
         }
 
-        const custoVaga = vaga.custo_medio_republica || vaga.custo_moradia_estimado || 0;
-        const condOrcamento = isNaN(pOrcamento) || custoVaga <= pOrcamento;
+        const custoVaga = vaga.custo_medio_republica ?? vaga.custo_moradia_estimado;
+        const condOrcamento = isNaN(pOrcamento) || custoVaga === null || custoVaga === undefined || Number(custoVaga) <= pOrcamento;
 
         return condChance && condEscopo && condPrazo && condOrcamento;
     });
 
-    const grid = document.getElementById("grid-historico-completo");
     if (filtrados.length === 0) {
         grid.innerHTML = '<div class="estado-vazio"><p>Nenhum edital encontrado para esta combinação de filtros.</p></div>';
     } else {
-        // AGRUPAMENTO E ORDENAÇÃO DO HISTÓRICO
-        const grupos = { ALTA: [], MEDIA: [], BAIXA: [], EXPIRADO: [] };
-        filtrados.forEach(vaga => grupos[vaga.probabilidade].push(vaga));
-        
-        // Ordena cada grupo por data crescente (mais urgente primeiro)
+        const grupos = { COMPATIVEL: [], PENDENTE: [], AGUARDANDO_ABERTURA: [], INCOMPATIVEL: [], ENCERRADO: [], REGRA_INVALIDA: [] };
+        filtrados.forEach(vaga => {
+            if (grupos[vaga.status_elegibilidade]) grupos[vaga.status_elegibilidade].push(vaga);
+        });
+
         Object.keys(grupos).forEach(chave => {
             grupos[chave].sort((a, b) => new Date(a.prazo_limite || a.prazo_fim) - new Date(b.prazo_limite || b.prazo_fim));
         });
 
         let htmlGrid = "";
-        
-        if (grupos.ALTA.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 5px;">Alta Compatibilidade</h3></div>`;
-            htmlGrid += grupos.ALTA.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        if (grupos.MEDIA.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #ffc107; border-bottom: 2px solid #ffc107; padding-bottom: 5px;">Atenção Aos Critérios</h3></div>`;
-            htmlGrid += grupos.MEDIA.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        if (grupos.BAIXA.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 5px;">Improváveis</h3></div>`;
-            htmlGrid += grupos.BAIXA.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        if (grupos.EXPIRADO.length > 0) {
-            htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: #6c757d; border-bottom: 2px solid #6c757d; padding-bottom: 5px;">Já Realizados / Expirados</h3></div>`;
-            htmlGrid += grupos.EXPIRADO.map(vaga => montarCardHTML(vaga, "historico")).join("");
-        }
-        
+
+        const secoes = [
+            ["COMPATIVEL", "Compatíveis com os critérios", "#28a745"],
+            ["PENDENTE", "Dados pendentes", "#ffc107"],
+            ["AGUARDANDO_ABERTURA", "Inscrições ainda não iniciadas", "#0d6efd"],
+            ["INCOMPATIVEL", "Incompatíveis com os critérios", "#dc3545"],
+            ["ENCERRADO", "Prazos encerrados", "#6c757d"],
+            ["REGRA_INVALIDA", "Regras que precisam de revisão administrativa", "#7c3aed"]
+        ];
+        secoes.forEach(([chave, titulo, cor]) => {
+            if (grupos[chave].length > 0) {
+                htmlGrid += `<div style="width: 100%; margin-top: 20px; grid-column: 1 / -1;"><h3 style="color: ${cor}; border-bottom: 2px solid ${cor}; padding-bottom: 5px;">${titulo}</h3></div>`;
+                htmlGrid += grupos[chave].map(vaga => montarCardHTML(vaga, "historico")).join("");
+            }
+        });
+
         grid.innerHTML = htmlGrid;
     }
 }
 
 function montarCardHTML(vaga, contexto) {
-    let cssProb, textoProb;
-    if (vaga.probabilidade === "ALTA") { cssProb = "tag-alta"; textoProb = "Alta Compatibilidade"; }
-    else if (vaga.probabilidade === "MEDIA") { cssProb = "tag-media"; textoProb = "Atenção aos Critérios"; }
-    else if (vaga.probabilidade === "BAIXA") { cssProb = "tag-baixa"; textoProb = "Baixa Compatibilidade"; }
-    else { cssProb = "tag-expirado"; textoProb = "Já Realizado / Expirado"; }
+    const status = vaga.status_elegibilidade || "PENDENTE";
+    const classeVisual = vaga.classe_visual || "MEDIA";
+    const classes = { ALTA: "tag-alta", MEDIA: "tag-media", BAIXA: "tag-baixa", EXPIRADO: "tag-expirado" };
+    const classeTag = classes[classeVisual] || "tag-media";
+    const textoStatus = rotuloElegibilidade(status);
 
-    const id = vaga.id || vaga.id_edital;
-    const titulo = vaga.nome_processo || vaga.titulo;
-    const tipo = vaga.tipo_beneficio || vaga.tipo_vaga;
-    const prazo = vaga.prazo_formatado || vaga.prazo_limite;
-    const custo = parseFloat(vaga.custo_medio_republica || vaga.custo_moradia_estimado || 0).toFixed(2);
-
-    const botaoMapa = contexto === "dashboard"
-        ? `<button onclick="destacarRotaDashboard(${id}, this)" class="btn-destaque">🎯 Destacar Rota</button>`
-        : `<button onclick="focarRotaHistorico(${id})" class="btn-foco-rota">🗺️ Ver Rota no Mapa</button>`;
+    const id = Number.parseInt(vaga.id || vaga.id_regra || vaga.id_edital, 10);
+    const titulo = escapeHtml(vaga.nome_processo || vaga.titulo || "Edital sem título");
+    const instituicao = escapeHtml(vaga.instituicao || "Instituição não informada");
+    const cidade = escapeHtml(vaga.cidade || "Cidade não informada");
+    const estado = escapeHtml(vaga.estado || "--");
+    const tipo = escapeHtml(formatarBeneficio(vaga.tipo_beneficio || vaga.tipo_vaga));
+    const prazo = escapeHtml(vaga.prazo_formatado || vaga.prazo_limite || "Não informado");
+    const custoBruto = vaga.custo_medio_republica ?? vaga.custo_moradia_estimado;
+    const custo = custoBruto === null || custoBruto === undefined ? "Não informado" : `R$ ${Number(custoBruto).toFixed(2)}`;
+    const notaCorte = vaga.nota_corte_estimada !== null && vaga.nota_corte_estimada !== undefined
+        ? `${Number(vaga.nota_corte_estimada)} pts (estimada)`
+        : "Não informada";
+    const moradia = vaga.tem_moradia === null || vaga.tem_moradia === undefined
+        ? "Disponibilidade não informada"
+        : (vaga.tem_moradia ? "Possui moradia estudantil" : "Não possui moradia estudantil");
+    const distancia = vaga.distancia_km === null || vaga.distancia_km === undefined
+        ? "Não informada"
+        : `${Number(vaga.distancia_km).toFixed(1)} km`;
+    const diagnostico = escapeHtml(vaga.diagnostico || "Classificação pendente.");
+    const documentos = vaga.documentos_exigidos
+        ? `<p class="meta-info" style="font-size: 0.8rem; margin-top: 6px;">📄 <strong>Documentos:</strong> ${escapeHtml(vaga.documentos_exigidos)}</p>`
+        : "";
+    const alertasLogisticos = Array.isArray(vaga.alertas_logisticos) && vaga.alertas_logisticos.length
+        ? `<p class="meta-info"><strong>Logística:</strong> ${escapeHtml(vaga.alertas_logisticos.join(" "))}</p>`
+        : "";
+    const botaoMapa = Number.isInteger(id) && id > 0
+        ? (contexto === "dashboard"
+            ? `<button onclick="destacarRotaDashboard(${id}, this)" class="btn-destaque">🎯 Destacar no Mapa</button>`
+            : `<button onclick="focarRotaHistorico(${id})" class="btn-foco-rota">🗺️ Ver no Mapa</button>`)
+        : "";
+    const linkDocumento = safeDocumentUrl(vaga.link_documento);
+    const urlDetalhe = escapeHtml(vaga.url_detalhe || '#');
+    const linkDocumentoHTML = linkDocumento
+        ? `<a href="${escapeHtml(linkDocumento)}" target="_blank" rel="noopener noreferrer" class="link-edital">Documento oficial →</a>`
+        : '<span class="meta-info">Documento externo não informado</span>';
 
     return `
-        <div class="card-oportunidade-rico borda-${vaga.probabilidade}">
+        <div class="card-oportunidade-rico borda-${classeVisual}">
             <div>
                 <div class="card-topo">
-                    <span class="instituicao-badge">${vaga.instituicao} • ${vaga.cidade}/${vaga.estado}</span>
-                    <span class="tag-probabilidade ${cssProb}">${textoProb}</span>
+                    <span class="instituicao-badge">${instituicao} • ${cidade}/${estado}</span>
+                    <span class="tag-probabilidade ${classeTag}">${escapeHtml(textoStatus)}</span>
                 </div>
                 <h3>${titulo}</h3>
-                <p class="meta-info">🎯 <strong>Modalidade:</strong> ${formatarBeneficio(tipo)}</p>
+                <p class="meta-info">🎯 <strong>Modalidade:</strong> ${tipo}</p>
+                <p class="meta-info">📊 <strong>Nota de Corte de Referência:</strong> ${escapeHtml(notaCorte)}</p>
                 <p class="meta-info">📅 <strong>Prazo Final:</strong> ${prazo}</p>
-                <p class="meta-info">🏠 <strong>República Média:</strong> R$ ${custo} ${vaga.tem_moradia ? "(Possui Moradia Gratuita)" : ""}</p>
-                <p class="meta-info">✈️ <strong>Distância de Casa:</strong> ${vaga.distancia_km} km</p>
+                <p class="meta-info">🏠 <strong>República Média:</strong> ${escapeHtml(custo)} · ${escapeHtml(moradia)}</p>
+                <p class="meta-info">📏 <strong>Distância em Linha Reta:</strong> ${escapeHtml(distancia)}</p>
                 <div class="diagnostico-box">
-                    <strong>Análise do Motor:</strong> ${vaga.diagnostico || "Classificação automática pendente."}
+                    <strong>Triagem baseada nas regras cadastradas:</strong> ${diagnostico}
                 </div>
+                ${alertasLogisticos}
+                ${documentos}
             </div>
             <div class="card-rodape">
                 ${botaoMapa}
-                <a href="${vaga.link_documento || "#"}" class="link-edital">Resumo e Edital →</a>
+                <a href="${urlDetalhe}" class="link-edital">Ver detalhes →</a>
+                ${linkDocumentoHTML}
             </div>
         </div>
     `;
