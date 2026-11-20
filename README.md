@@ -56,6 +56,17 @@ O PHP CLI deve ter `pdo_sqlite` habilitado para a suíte. Testes não devem usar
 
 O `DatabaseSeeder` não cria contas automaticamente. Os seeders específicos de demonstração são bloqueados por padrão e somente podem ser usados em um banco isolado, com `SCOM_ALLOW_DEMO_SEEDERS=true` e `SCOM_DEMO_PASSWORD` configurada. Eles nunca podem ser executados em `motor_elegibilidade`.
 
+### Contas de Demonstração
+
+Configure `SCOM_DEMO_PASSWORD` no `.env` (mínimo 12 caracteres) antes de rodar
+`php artisan db:seed --class=UsuariosSeeder`.
+
+| Perfil | Email | Senha |
+|---|---|---|
+| Estudante | `estudante@example.test` | (o valor de `SCOM_DEMO_PASSWORD`) |
+| Coordenador | `coordenador@example.test` | (o valor de `SCOM_DEMO_PASSWORD`) |
+| Diretor | `diretor@example.test` | (o valor de `SCOM_DEMO_PASSWORD`) |
+
 ## Git
 
 Desenvolva em branches de funcionalidade/correção. Antes do Pull Request, rode testes, build e `git diff --check`, revise as alterações e documente resultados. Não faça merge com testes pendentes ou falhando.

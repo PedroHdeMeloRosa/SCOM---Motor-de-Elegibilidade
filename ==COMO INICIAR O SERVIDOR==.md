@@ -61,6 +61,13 @@ git diff --check
 git status -sb
 ```
 
-## 6. Credenciais
+### Contas de Demonstração
 
-Não existem credenciais padrão para novas instalações. O cadastro público cria exclusivamente estudantes. A primeira conta administrativa deve ser provisionada por procedimento controlado, fora do cadastro público. Nunca reutilize senhas de demonstração em um ambiente com dados reais.
+Configure `SCOM_DEMO_PASSWORD` no `.env` (mínimo 12 caracteres) antes de rodar
+`php artisan db:seed --class=UsuariosSeeder`.
+
+| Perfil | Email | Senha |
+|---|---|---|
+| Estudante | `estudante@example.test` | (o valor de `SCOM_DEMO_PASSWORD`) |
+| Coordenador | `coordenador@example.test` | (o valor de `SCOM_DEMO_PASSWORD`) |
+| Diretor | `diretor@example.test` | (o valor de `SCOM_DEMO_PASSWORD`) |
