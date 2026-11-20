@@ -39,6 +39,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'senha_hash',
+        'remember_token',
     ];
 
     /**
@@ -47,6 +48,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'senha_hash' => 'hashed',
             'criado_em' => 'datetime',
         ];
     }

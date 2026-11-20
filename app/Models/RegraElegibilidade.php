@@ -19,6 +19,7 @@ class RegraElegibilidade extends Model
         'renda_maxima_per_capita',
         'exige_escola_publica',
         'exige_etnia',
+        'exige_pcd',
         'nota_corte_estimada',
         'prazo_inicio',
         'prazo_fim',
@@ -33,6 +34,7 @@ class RegraElegibilidade extends Model
             'renda_maxima_per_capita' => 'float',
             'exige_escola_publica' => 'boolean',
             'exige_etnia' => 'boolean',
+            'exige_pcd' => 'boolean',
             'nota_corte_estimada' => 'integer',
             'versao' => 'integer',
         ];
@@ -44,5 +46,10 @@ class RegraElegibilidade extends Model
     public function edital()
     {
         return $this->belongsTo(Edital::class, 'id_edital');
+    }
+
+    public function retificacoesOrigem()
+    {
+        return $this->hasMany(HistoricoRetificacao::class, 'id_regra_original');
     }
 }
