@@ -3,17 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    /**
-     * Exibe a tela de login (ou redireciona para o painel correto se já estiver autenticado).
-     */
     public function exibirLogin()
     {
         if (Auth::check()) {
@@ -26,81 +27,74 @@ class AuthController extends Controller
         return view('estudante.login');
     }
 
-    /**
-     * Processa a tentativa de login validando no banco SQL (tabela cadastros).
-     */
     public function autenticar(Request $request)
     {
-        $credenciais = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:150'],
-            'password' => ['required', 'string'],
-        ], [
-            'email.required' => 'Informe o seu endereço de e-mail.',
-            'email.email' => 'Informe um formato de e-mail válido.',
-            'password.required' => 'Informe a sua senha.',
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->input('email'))),
         ]);
 
-        $emailNormalizado = Str::lower(trim($credenciais['email']));
-        $chaveRateLimit = $emailNormalizado . '|' . $request->ip();
+        $credenciais = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:150'],
+            'password' => [
+                'required', 'string', 'max:72',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && strlen($value) > 72) {
+                        $fail('A senha excede o limite seguro de 72 bytes para o algoritmo bcrypt legado.');
+                    }
+                },
+            ],
+        ]);
 
-        // Camada 1: Limitação de tentativas (Máximo de 5 tentativas por minuto)
-        if (RateLimiter::tooManyAttempts($chaveRateLimit, 5)) {
-            $segundos = RateLimiter::availableIn($chaveRateLimit);
+        $chaveIdentidade = 'login:conta:'.hash('sha256', $credenciais['email'].'|'.$request->ip());
+        $chaveIp = 'login:ip:'.hash('sha256', (string) $request->ip());
 
+        if (RateLimiter::tooManyAttempts($chaveIdentidade, 5) || RateLimiter::tooManyAttempts($chaveIp, 30)) {
+            $espera = max(
+                RateLimiter::availableIn($chaveIdentidade),
+                RateLimiter::availableIn($chaveIp)
+            );
+
+            throw ValidationException::withMessages([
+                'email' => "Muitas tentativas de acesso. Aguarde {$espera} segundos e tente novamente.",
+            ]);
+        }
+
+        $usuario = User::query()->where('email', $credenciais['email'])->first();
+        $hashVerificado = $usuario?->senha_hash
+            ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
+        $senhaValida = Hash::check($credenciais['password'], $hashVerificado);
+        $contaAtiva = $usuario !== null && $usuario->status_conta === 'ATIVA';
+        $destino = $usuario ? $this->obterRotaDestinoPorPerfil($usuario->tipo_perfil) : null;
+
+        if (!$senhaValida || !$contaAtiva || $destino === null) {
+            Log::warning('scom.auth.login_falhou', [
+                'email_hash' => hash('sha256', $credenciais['email']),
+                'ip' => $request->ip(),
+                'motivo' => $usuario === null ? 'cadastro_inexistente' : (!$senhaValida ? 'senha_incorreta' : (!$contaAtiva ? 'conta_inativa' : 'perfil_invalido')),
+            ]);
+
+            RateLimiter::hit($chaveIdentidade, 60);
+            RateLimiter::hit($chaveIp, 60);
+
+            // Mensagem única evita revelar se o e-mail existe ou se a conta está banida.
             return back()->withErrors([
-                'email' => "Muitas tentativas de login. Por segurança, aguarde {$segundos} segundos antes de tentar novamente.",
+                'email' => 'Não foi possível autenticar com os dados informados.',
             ])->onlyInput('email');
         }
 
-        // Camada 2: Consulta real à tabela 'cadastros' via Eloquent
-        $usuario = User::where('email', $emailNormalizado)->first();
-
-        // Camada 3: Verificação criptográfica do Bcrypt (senha_hash)
-        if (!$usuario || !Hash::check($credenciais['password'], $usuario->senha_hash)) {
-            RateLimiter::hit($chaveRateLimit, 60);
-
-            return back()->withErrors([
-                'email' => 'As credenciais estão incorretas ou a conta não está autorizada.',
-            ])->onlyInput('email');
-        }
-
-        // Camada 4: Verificação de status da conta (Bloqueio imediato de contas BANIDAS)
-        if ($usuario->status_conta === 'BANIDA') {
-            RateLimiter::hit($chaveRateLimit, 60);
-
-            return back()->withErrors([
-                'email' => 'Sua conta foi suspensa pela administração.',
-            ])->onlyInput('email');
-        }
-
-        if ($usuario->status_conta !== 'ATIVA') {
-            RateLimiter::hit($chaveRateLimit, 60);
-
-            return back()->withErrors([
-                'email' => 'Sua conta não está ativa no momento.',
-            ])->onlyInput('email');
-        }
-
-        // Camada 5: Validação prévia de perfil RBAC antes de iniciar sessão
-        $destino = $this->obterRotaDestinoPorPerfil($usuario->tipo_perfil);
-
-        if ($destino === null) {
-            return back()->withErrors([
-                'email' => 'O perfil da conta não possui autorização válida no sistema.',
-            ])->onlyInput('email');
-        }
-
-        // Login confirmado: limpa o contador de falhas e regenera o ID da sessão (Anti-Session Fixation)
-        RateLimiter::clear($chaveRateLimit);
+        RateLimiter::clear($chaveIdentidade);
+        RateLimiter::clear($chaveIp);
+        Log::info('scom.auth.login_sucesso', [
+            'cadastro_id' => $usuario->id,
+            'tipo_perfil' => $usuario->tipo_perfil,
+            'ip' => $request->ip(),
+        ]);
         Auth::login($usuario);
         $request->session()->regenerate();
 
-        return redirect()->intended($destino);
+        return redirect()->to($destino);
     }
 
-    /**
-     * Exibe a tela de cadastro.
-     */
     public function exibirCadastro()
     {
         if (Auth::check()) {
@@ -113,46 +107,65 @@ class AuthController extends Controller
         return view('estudante.cadastro');
     }
 
-    /**
-     * Processa o registro de uma nova conta de estudante.
-     */
     public function registrar(Request $request)
     {
+        $chaveCadastro = 'cadastro:ip:'.hash('sha256', (string) $request->ip());
+        if (RateLimiter::tooManyAttempts($chaveCadastro, 5)) {
+            $espera = RateLimiter::availableIn($chaveCadastro);
+            throw ValidationException::withMessages([
+                'email' => "Muitas tentativas de cadastro. Aguarde {$espera} segundos e tente novamente.",
+            ]);
+        }
+        RateLimiter::hit($chaveCadastro, 600);
+
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->input('email'))),
+            'nome' => trim((string) $request->input('nome')),
+        ]);
+
         $dados = $request->validate([
             'nome' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'string', 'email', 'max:150', 'unique:cadastros,email'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'email' => ['required', 'string', 'email', 'max:150', Rule::unique('cadastros', 'email')],
+            'password' => [
+                'required', 'string', 'min:12', 'max:72', 'confirmed',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && strlen($value) > 72) {
+                        $fail('A senha não pode ultrapassar 72 bytes.');
+                    }
+                },
+            ],
         ], [
             'nome.required' => 'O nome é obrigatório.',
             'email.required' => 'O e-mail é obrigatório.',
-            'email.unique' => 'Este e-mail já está cadastrado em nossa base.',
-            'password.required' => 'A senha é obrigatória.',
-            'password.min' => 'A senha deve ter pelo menos 6 caracteres.',
-            'password.confirmed' => 'As senhas não conferem. Digite a mesma senha nos dois campos.',
+            'email.unique' => 'Este e-mail já está cadastrado.',
+            'password.min' => 'A senha deve ter pelo menos 12 caracteres.',
+            'password.max' => 'A senha não pode ultrapassar 72 caracteres.',
+            'password.confirmed' => 'As senhas não conferem.',
         ]);
 
         $usuario = User::create([
-            'nome' => trim($dados['nome']),
-            'email' => Str::lower(trim($dados['email'])),
+            'nome' => $dados['nome'],
+            'email' => $dados['email'],
             'senha_hash' => Hash::make($dados['password']),
+            // O papel é definido no servidor. Nunca aceitar tipo_perfil enviado pelo formulário.
             'tipo_perfil' => 'ESTUDANTE',
             'status_conta' => 'ATIVA',
         ]);
 
-        // Autentica o usuário recém-criado imediatamente
+        Log::info('scom.auth.cadastro_estudante', [
+            'cadastro_id' => $usuario->id,
+            'ip' => $request->ip(),
+        ]);
+
         Auth::login($usuario);
         $request->session()->regenerate();
 
         return redirect()->route('estudante.painel');
     }
 
-    /**
-     * Encerra a sessão de forma segura (suporta tanto chamada Fetch/JSON quanto Form POST).
-     */
-    public function logout(Request $request)
+    public function logout(Request $request): JsonResponse|\Illuminate\Http\RedirectResponse
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
@@ -166,9 +179,6 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
-    /**
-     * Mapeia o destino oficial de acordo com o perfil RBAC.
-     */
     private function obterRotaDestinoPorPerfil(?string $tipoPerfil): ?string
     {
         return match ($tipoPerfil) {
