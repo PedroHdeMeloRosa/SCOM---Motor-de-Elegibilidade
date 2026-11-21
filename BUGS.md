@@ -15,18 +15,27 @@
 - [x] Aviso de resolução de asset no `vite build` em `resources/css/app.css`
 - [x] **Validação completa em MariaDB (`scom_test`)**: corrigido tipo de FK legada (`INT signed`) em `LegacySchemaMigrationSafetyTest`, criado perfil isolado `phpunit.mariadb.xml` (eliminando `errno: 150`, erro `419 CSRF` e acionamento indevido do `GuardsDemoSeeders`)
 - [x] **CRUD de editais do coordenador + testes**: edição (`PATCH /coordenacao/editais/{edital}`), publicação, arquivamento e retificação versionada já implementados e cobertos por testes automatizados
-- [x] **Testes ampliados de governança, RBAC, segurança e seeders**: `GovernancaESegurancaTest` cobrindo isolamento entre perfis, proteção entre múltiplos diretores, bloqueio de escalação/IDOR/XSS, rate limit e idempotência de seeders (69 testes / 250 asserções passando em SQLite e MariaDB)
+- [x] **Testes ampliados de governança, RBAC, segurança e seeders**: `GovernancaESegurancaTest` cobrindo isolamento entre perfis, proteção entre múltiplos diretores, bloqueio de escalação/IDOR/XSS, rate limit e idempotência de seeders
 - [x] Alinhamento de `minlength="12"` na view `estudante/cadastro.blade.php` com o `AuthController`
 - [x] Filtro de mobilidade no Dashboard e destaque visual de restrição logística em `public/assets/js/painel_estudante.js`
 - [x] Documentação de escopo, limitações e comando de validação em MariaDB adicionados ao `README.md`
-- [x] Remoção do legado PHP puro e HTML estático (`api/`, `editor/`, `estudante/`, `index.html`, `gerar_contas.php`, `public/assets/js/engine.js`)
+- [x] Remoção do legado PHP puro e HTML estático (`api/`, `editor/`, `estudante/`, `index.html`, `gerar_contas.php`, `public/assets/js/engine.js`) — branch `fix/estabilidade-site` concluída e integrada
+- [x] **Painel da Diretoria e Auditoria (`feat/interface-diretoria`)**:
+  - Criação da tabela aditiva `logs_auditoria` (`LogAuditoria`) e registro automático das ações de Diretoria e Coordenação
+  - Redesign do painel em 4 abas (*Visão Geral*, *Estudantes*, *Equipe & Pontuação* e *Auditoria*) com cards flutuantes, ficha socioeconômica expansível, badges interativas com modal de confirmação e persistência de aba/scroll
+  - Motor de elegíveis prováveis, funil de engajamento, gráfico combinado (alunos vs. editais em 14 dias), Top 5 coordenadores mais ativos e gráfico de pizza alterável por ação
+  - Correção de tipagem (`toArray()`) na chamada de `AvaliadorElegibilidade::avaliar()` e adequação do `DiretoriaDemoSeeder` aos valores válidos do `ENUM` `nivel_mobilidade`
+  - Suíte ampliada para **71 testes / 258 asserções** passando em SQLite e MariaDB
 
 ## Nota de ambiente (não bloqueia merge)
 
-- [ ] `public/hot` não é criado pelo Vite quando o repositório está dentro do OneDrive — recomendação: clonar o projeto fora do OneDrive (ex: `C:\xampp\htdocs\...` ou `C:\dev\SCOM`).
+- [x] `public/hot` pode falhar ao ser gravado pelo Vite quando o repositório é clonado dentro do OneDrive (bloqueio de sincronização do Windows). Contornado mantendo o projeto fora do OneDrive (ex.: `C:\xampp\htdocs\...`) e mantendo `/public/hot` no `.gitignore`.
 
-## Evoluções planejadas para branches futuras (a partir da `main` atualizada)
+## Próximas evoluções planejadas (a partir da `main`)
 
-- [ ] **Governança colegiada da Diretoria (`feat/governanca-diretoria`)** — fluxo de aprovação por maioria (`50% + 1` dos diretores ativos) caso seja necessário alterar ou remover outra conta de nível `DIRETOR`
-- [ ] **IA para leitura de editais (`feat/ai-edital-import`)** — decisão do grupo (obrigatório ou opcional?), sempre mantendo revisão humana obrigatória
-- [ ] **Novas funcionalidades da área do estudante** — branch dedicada criada após merge da `fix/estabilidade-site`
+- [ ] **Inteligência de editais e auditoria avançada (`feat/diretoria-ranking-auditoria`)** — Ranking de Editais na Visão Geral (elegíveis prováveis, comentários e alertas de prazo), filtros por ação/responsável na aba Auditoria e exportação em CSV
+- [ ] **Novas funcionalidades da área do estudante** — melhorias de experiência e recursos adicionais (ex.: favoritos) em branch dedicada
+- [ ] **IA para leitura de editais (`feat/ai-edital-import`)** — sujeito a decisão do grupo, mantendo revisão humana obrigatória.
+
+## Backlog futuro (fora do escopo atual)
+- [ ] **Governança colegiada da Diretoria (`50% + 1`)** — removido do escopo atual; mantido apenas como planejamento futuro caso haja necessidade de aprovação por maioria para alterar/remover contas `DIRETOR`
