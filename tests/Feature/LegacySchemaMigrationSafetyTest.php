@@ -54,7 +54,7 @@ class LegacySchemaMigrationSafetyTest extends TestCase
     public function test_additive_migrations_preserve_existing_accounts_and_edicts(): void
     {
         Schema::create('cadastros', function (Blueprint $table) {
-            $table->increments('id');
+            $table->integer('id')->autoIncrement();
             $table->string('nome', 100);
             $table->string('email', 150)->unique();
             $table->string('senha_hash', 255);
@@ -72,7 +72,7 @@ class LegacySchemaMigrationSafetyTest extends TestCase
         ]);
 
         Schema::create('editais', function (Blueprint $table) {
-            $table->increments('id');
+            $table->integer('id')->autoIncrement();
             $table->string('instituicao', 100);
             $table->string('nome_processo', 150);
             $table->string('cidade', 100);
@@ -125,8 +125,8 @@ class LegacySchemaMigrationSafetyTest extends TestCase
     public function test_exige_pcd_migration_adds_optional_rule_flag_without_changing_existing_rules(): void
     {
         Schema::create('regras_elegibilidade', function (Blueprint $table) {
-            $table->increments('id');
-            $table->unsignedInteger('id_edital');
+            $table->integer('id')->autoIncrement();
+            $table->integer('id_edital');
             $table->string('tipo_beneficio', 40);
             $table->decimal('renda_maxima_per_capita', 10, 2)->nullable();
             $table->boolean('exige_escola_publica')->default(false);
@@ -165,7 +165,7 @@ class LegacySchemaMigrationSafetyTest extends TestCase
     public function test_race_color_migration_preserves_legacy_self_declaration_column_and_records(): void
     {
         Schema::create('cadastros', function (Blueprint $table) {
-            $table->increments('id');
+            $table->integer('id')->autoIncrement();
             $table->string('nome', 100);
             $table->string('email', 150)->unique();
             $table->string('senha_hash', 255);
@@ -183,8 +183,8 @@ class LegacySchemaMigrationSafetyTest extends TestCase
         ]);
 
         Schema::create('perfis_estudantes', function (Blueprint $table) {
-            $table->increments('id');
-            $table->unsignedInteger('id_usuario')->unique();
+            $table->integer('id')->autoIncrement();
+            $table->integer('id_usuario')->unique();
             $table->string('etnia', 30)->nullable();
         });
         DB::table('perfis_estudantes')->insert([
