@@ -137,14 +137,27 @@ async function carregarDadosPainel() {
         await preencherFormularioPerfil(dadosPerfil);
         renderizarGraficos(json.kpis, todasOportunidades);
 
-        // TOP 8 DO DASHBOARD: Filtra expirados, ordena por prioridade e depois por prazo mais urgente
+        // TOP 8 DO DASHBOARD: Filtra expirados e vagas além da mobilidade declarada na ficha
         const pesosStatus = { COMPATIVEL: 1, PENDENTE: 2, AGUARDANDO_ABERTURA: 3, INCOMPATIVEL: 4, ENCERRADO: 5 };
-        const vagasAtivas = todasOportunidades.filter(v => v.status_elegibilidade !== 'ENCERRADO');
+        const ordemMobilidade = { LOCAL: 1, ESTADUAL: 2, INTERESTADUAL: 3, INTERNACIONAL: 4 };
+        const limiteMobilidade = ordemMobilidade[dadosPerfil.nivel_mobilidade] ?? 4;
+
+        const vagasAtivas = todasOportunidades.filter(v => {
+            if (v.status_elegibilidade === 'ENCERRADO') return false;
+            const escopoVaga = v.escopo_geografico || v.escopo_mobilidade;
+            const nivelVaga = ordemMobilidade[escopoVaga] ?? 1;
+            return nivelVaga <= limiteMobilidade;
+        });
 
         const top8 = [...vagasAtivas].sort((a, b) => {
             const pesoA = pesosStatus[a.status_elegibilidade] ?? 99;
             const pesoB = pesosStatus[b.status_elegibilidade] ?? 99;
             if (pesoA !== pesoB) return pesoA - pesoB;
+
+            const alertaA = Array.isArray(a.alertas_logisticos) && a.alertas_logisticos.length > 0 ? 1 : 0;
+            const alertaB = Array.isArray(b.alertas_logisticos) && b.alertas_logisticos.length > 0 ? 1 : 0;
+            if (alertaA !== alertaB) return alertaA - alertaB;
+
             return new Date(a.prazo_limite || a.prazo_fim) - new Date(b.prazo_limite || b.prazo_fim);
         }).slice(0, 8);
 
@@ -814,10 +827,15 @@ function aplicarFiltrosHistorico(fichaCompleta = true) {
 
 function montarCardHTML(vaga, contexto) {
     const status = vaga.status_elegibilidade || "PENDENTE";
-    const classeVisual = vaga.classe_visual || "MEDIA";
+    const temAlertaLogistico = Array.isArray(vaga.alertas_logisticos) && vaga.alertas_logisticos.length > 0;
+    const classeVisual = (status === "COMPATIVEL" && temAlertaLogistico)
+        ? "MEDIA"
+        : (vaga.classe_visual || "MEDIA");
     const classes = { ALTA: "tag-alta", MEDIA: "tag-media", BAIXA: "tag-baixa", EXPIRADO: "tag-expirado" };
     const classeTag = classes[classeVisual] || "tag-media";
-    const textoStatus = rotuloElegibilidade(status);
+    const textoStatus = (status === "COMPATIVEL" && temAlertaLogistico)
+        ? "Compatível (restrição logística)"
+        : rotuloElegibilidade(status);
 
     const id = Number.parseInt(vaga.id || vaga.id_regra || vaga.id_edital, 10);
     const titulo = escapeHtml(vaga.nome_processo || vaga.titulo || "Edital sem título");

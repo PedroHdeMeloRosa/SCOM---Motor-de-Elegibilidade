@@ -11,6 +11,21 @@ O resultado do motor é uma **triagem preliminar explicável**. Não representa 
 - **Diretoria:** administração de perfis de estudante/coordenador e situação das contas.
 - **Motor:** avaliação dos critérios cadastrados, vigência e pendências, com alertas logísticos separados.
 
+## Escopo e limitações
+
+**O que o sistema faz:**
+- Cadastro e autenticação de estudantes com controle de acesso por perfil (`ESTUDANTE`, `COORDENADOR`, `DIRETOR`).
+- Armazenamento da ficha socioeconômica e de mobilidade (com `raca_cor` criptografada em repouso).
+- Gestão completa de editais pela Coordenação (rascunho, edição, publicação, arquivamento e retificação versionada de regras com histórico auditável).
+- Triagem preliminar explicável cruzando os dados declarados com critérios objetivos das regras ativas, separando alertas logísticos (distância, mobilidade e moradia) e exibindo visualização geográfica no mapa.
+- Administração de contas pela Diretoria (promoção/rebaixamento entre Estudante e Coordenador e suspensão/reativação de contas).
+
+**O que está fora do escopo atual:**
+- Garantia de aprovação, cálculo probabilístico ou substituição da leitura do edital oficial.
+- Inscrição direta nos processos seletivos das universidades ou envio de documentos comprobatórios.
+- Recuperação de senha por e-mail (ainda não configurada).
+- Extração automática de editais por IA e governança colegiada (`50% + 1`) entre Diretores (planejados para branches futuras).
+
 ## Tecnologias
 
 - Laravel 13 / PHP 8.3+
@@ -51,6 +66,14 @@ npm run build
 ```
 
 O PHP CLI deve ter `pdo_sqlite` habilitado para a suíte. Testes não devem usar `motor_elegibilidade`. O workflow `.github/workflows/ci.yml` repete validação do Composer, sintaxe PHP, PHPUnit e build do Vite em pushes para `main`/`fix/estabilidade-site` e em Pull Requests para `main`.
+
+# Suíte padrão (SQLite em memória)
+php artisan test
+
+# Validação completa em MariaDB (requer banco vazio scom_test criado no XAMPP)
+.\vendor\bin\phpunit -c phpunit.mariadb.xml
+
+npm run build
 
 ## Seeders de demonstração
 
