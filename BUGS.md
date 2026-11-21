@@ -7,22 +7,25 @@
 - [x] Primary key duplicada em migrations (SQLite)
 - [x] Índice duplicado em colunas FK (SQLite)
 - [x] `node_modules` corrompido
-- [x] CI do GitHub Actions: PHP 8.3 → 8.5, cria `.env`, gera `APP_KEY`, roda `npm run build` antes dos testes (era: 5 fails + 33 warnings → 52 passed)
+- [x] CI do GitHub Actions: PHP 8.3 → 8.5, cria `.env`, gera `APP_KEY`, roda `npm run build` antes dos testes
 
-## Pendências (não bloqueiam demo)
+## Resolvidos em 2026-11-21
+
+- [x] Vazamento de variáveis do `.env` para o PHPUnit (`phpunit.xml` agora força `<server>` e `<env>` para SQLite em memória)
+- [x] Aviso de resolução de asset no `vite build` em `resources/css/app.css`
+- [x] **Validação completa em MariaDB (`scom_test`)**: corrigido tipo de FK legada (`INT signed`) em `LegacySchemaMigrationSafetyTest`, criado perfil isolado `phpunit.mariadb.xml` (eliminando `errno: 150`, erro `419 CSRF` e acionamento indevido do `GuardsDemoSeeders`)
+- [x] **CRUD de editais do coordenador + testes**: edição (`PATCH /coordenacao/editais/{edital}`), publicação, arquivamento e retificação versionada já implementados e cobertos por testes automatizados
+- [x] **Testes ampliados de governança, RBAC, segurança e seeders**: `GovernancaESegurancaTest` cobrindo isolamento entre perfis, proteção entre múltiplos diretores, bloqueio de escalação/IDOR/XSS, rate limit e idempotência de seeders
+- [x] Alinhamento de `minlength="12"` na view `estudante/cadastro.blade.php` com o `AuthController`
+
+## Pendências (não bloqueiam merge da `fix/estabilidade-site`)
 
 - [ ] Documentação de escopo no README
-- [ ] Remover legado PHP puro (`api/controllers/`, `index.html`)
+- [ ] Remover legado PHP puro (`api/controllers/`, `index.html`, `estudante/*.html`, `editor/*.html`, `gerar_contas.php`)
 - [ ] `public/hot` não é criado pelo Vite no OneDrive — avaliar mover para `C:\dev\SCOM`
-## Pendências para branches futuras (não bloqueiam a `fix`)
 
-- [ ] **CRUD de editais do coordenador** — rotas `/editais` (POST), `/editais/{id}` (PUT), `/editais/{id}/arquivar` (PATCH) não existem. Coordenador cria/publica (via `AuthAndStudentFlowTest`), mas **não edita nem arquiva**. Branch planejada: `feat/coordenador-crud-editais` (sairá da `main` após merge da `fix`).
-- [ ] **Testes de edição/arquivamento** movidos para essa branch junto com a feature.
-- [ ] **IA para leitura de editais** — decisão do grupo (obrigatório ou opcional?).
-## Pendência para `feat/coordenador-crud-editais`
+## Evoluções planejadas para branches futuras (a partir da `main` atualizada)
 
-- [ ] **Testes em MariaDB** — `php artisan test --env=testing` expõe 3 bugs de configuração:
-  1. FK type mismatch (`cadastros.id` signed vs `perfis_estudantes.id_usuario`)
-  2. Guard `GuardsDemoSeeders` bloqueia `motor_elegibilidade`
-  3. 15 testes de auth retornam 419 CSRF em MariaDB
-  - **Atenção:** rodar `--env=testing` sem `.env.testing` apaga o banco de dev. Fazer junto com `feat/coordenador-crud-editais`. (~2–4h)
+- [ ] **Governança colegiada da Diretoria (`feat/governanca-diretoria`)** — fluxo de aprovação por maioria (`50% + 1` dos diretores ativos) caso seja necessário alterar ou remover outra conta de nível `DIRETOR`
+- [ ] **IA para leitura de editais (`feat/ai-edital-import`)** — decisão do grupo (obrigatório ou opcional?), sempre mantendo revisão humana obrigatória
+- [ ] **Novas funcionalidades da área do estudante** — branch dedicada criada após merge da `fix/estabilidade-site`
