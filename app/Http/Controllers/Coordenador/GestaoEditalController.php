@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Coordenador;
 use App\Http\Controllers\Controller;
 use App\Models\Edital;
 use App\Models\HistoricoRetificacao;
+use App\Models\LogAuditoria;
 use App\Models\RegraElegibilidade;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class GestaoEditalController extends Controller
@@ -79,6 +80,12 @@ class GestaoEditalController extends Controller
                 'coordenador_id' => auth()->id(),
                 'status_publicacao' => 'RASCUNHO',
             ]);
+
+            $this->registrarAuditoria(
+                'EDITAL_CRIADO',
+                $edital->id,
+                "Criou rascunho: {$edital->instituicao} — {$edital->nome_processo}."
+            );
         });
 
         return back()->with('status', 'Edital criado como rascunho. Revise as informações antes de publicar.');
@@ -119,6 +126,12 @@ class GestaoEditalController extends Controller
             'coordenador_id' => auth()->id(),
         ]);
 
+        $this->registrarAuditoria(
+            'EDITAL_EDITADO',
+            $edital->id,
+            "Editou edital: {$edital->instituicao} — {$edital->nome_processo}."
+        );
+
         return back()->with('status', 'Dados do edital atualizados.');
     }
 
@@ -133,6 +146,12 @@ class GestaoEditalController extends Controller
 
         Log::info('scom.edital.publicado', ['edital_id' => $edital->id, 'coordenador_id' => auth()->id()]);
 
+        $this->registrarAuditoria(
+            'EDITAL_PUBLICADO',
+            $edital->id,
+            "Publicou edital: {$edital->instituicao} — {$edital->nome_processo}."
+        );
+
         return back()->with('status', 'Edital publicado.');
     }
 
@@ -141,6 +160,12 @@ class GestaoEditalController extends Controller
         $edital->update(['status_publicacao' => 'ARQUIVADO']);
 
         Log::info('scom.edital.arquivado', ['edital_id' => $edital->id, 'coordenador_id' => auth()->id()]);
+
+        $this->registrarAuditoria(
+            'EDITAL_ARQUIVADO',
+            $edital->id,
+            "Arquivou edital: {$edital->instituicao} — {$edital->nome_processo}."
+        );
 
         return back()->with('status', 'Edital arquivado. Os dados e o histórico foram preservados.');
     }
@@ -187,6 +212,12 @@ class GestaoEditalController extends Controller
                 'edital_id' => $regra->id_edital,
                 'coordenador_id' => auth()->id(),
             ]);
+
+            $this->registrarAuditoria(
+                'REGRA_RETIFICADA',
+                $regra->id_edital,
+                "Retificou regra (v{$novaRegra->versao}): " . trim($dados['motivo_retificacao'])
+            );
         });
 
         return back()->with('status', 'Regra retificada. A versão anterior foi preservada no histórico.');
@@ -225,5 +256,17 @@ class GestaoEditalController extends Controller
             'prazo_fim' => $dados['prazo_fim'],
             'documentos_exigidos' => $dados['documentos_exigidos'] ?? null,
         ];
+    }
+
+    private function registrarAuditoria(string $acao, int $editalId, string $detalhes): void
+    {
+        LogAuditoria::create([
+            'ator_id' => auth()->id(),
+            'acao' => $acao,
+            'entidade_tipo' => 'EDITAL',
+            'entidade_id' => $editalId,
+            'detalhes' => $detalhes,
+            'criado_em' => now(),
+        ]);
     }
 }

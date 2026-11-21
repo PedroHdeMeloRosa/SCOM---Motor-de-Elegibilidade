@@ -506,11 +506,53 @@ class AuthAndStudentFlowTest extends TestCase
             ->assertJsonPath('oportunidades.0.distancia_km', null);
     }
 
-    private function criarUsuario(string $perfil, string $status): User
+    public function test_diretoria_filtra_usuarios_por_busca_perfil_e_status(): void
+    {
+        $diretor = $this->criarUsuario('DIRETOR', 'ATIVA', 'diretor.filtro@example.test');
+        $coordAtivo = $this->criarUsuario('COORDENADOR', 'ATIVA', 'coord.ativo@example.test');
+        $estudanteBanido = $this->criarUsuario('ESTUDANTE', 'BANIDA', 'aluno.banido@example.test');
+
+        $this->actingAs($diretor)
+            ->get(route('diretoria.dashboard', [
+                'busca' => 'aluno.banido',
+                'perfil' => 'ESTUDANTE',
+                'status' => 'BANIDA',
+            ]))
+            ->assertOk()
+            ->assertSee($estudanteBanido->email)
+            ->assertDontSee($coordAtivo->email);
+    }
+
+    public function test_atualizacao_de_conta_pela_diretoria_registra_log_de_auditoria(): void
+    {
+        $diretor = $this->criarUsuario('DIRETOR');
+        $estudante = $this->criarUsuario('ESTUDANTE', 'ATIVA', 'audit.alvo@example.test');
+
+        $this->actingAs($diretor)
+            ->patch(route('diretoria.usuarios.atualizar', $estudante), [
+                'tipo_perfil' => 'COORDENADOR',
+                'status_conta' => 'ATIVA',
+            ])->assertRedirect();
+
+        $this->assertDatabaseHas('logs_auditoria', [
+            'ator_id' => $diretor->id,
+            'acao' => 'CONTA_ATUALIZADA',
+            'entidade_tipo' => 'USUARIO',
+            'entidade_id' => $estudante->id,
+        ]);
+
+        $this->actingAs($diretor)
+            ->get(route('diretoria.dashboard'))
+            ->assertOk()
+            ->assertSee('CONTA_ATUALIZADA')
+            ->assertSee('audit.alvo@example.test');
+    }
+
+    private function criarUsuario(string $perfil, string $status = 'ATIVA', ?string $email = null): User
     {
         return User::create([
             'nome' => 'Usuário de Teste',
-            'email' => strtolower($perfil).'.'.strtolower($status).'@example.test',
+            'email' => $email ?? strtolower($perfil) . '.' . strtolower($status) . '@example.test',
             'senha_hash' => Hash::make('senha-forte-123'),
             'tipo_perfil' => $perfil,
             'status_conta' => $status,
@@ -522,7 +564,7 @@ class AuthAndStudentFlowTest extends TestCase
     {
         $edital = Edital::create([
             'instituicao' => 'Instituição de Teste',
-            'nome_processo' => 'Edital '.$statusPublicacao,
+            'nome_processo' => 'Edital ' . $statusPublicacao,
             'cidade' => 'Campinas',
             'estado' => 'SP',
             'regiao' => 'SUDESTE',

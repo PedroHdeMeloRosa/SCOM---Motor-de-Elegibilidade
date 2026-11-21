@@ -2,6 +2,13 @@
 
 Este documento regista as modificações estruturais, implementações e decisões arquiteturais do projeto.
 
+### [feat/interface-diretoria] - 2026-11-21
+- **Banco de Dados (Migration Aditiva):** Criação da tabela `logs_auditoria` (`ator_id`, `acao`, `entidade_tipo`, `entidade_id`, `detalhes`, `criado_em`) e model `LogAuditoria`.
+- **Painel da Diretoria:** Redesign em 4 abas (*Visão Geral*, *Estudantes*, *Equipe & Pontuação* e *Auditoria*) com identidade visual institucional, cards flutuantes por nível de acesso, ficha socioeconômica expansível e badges interativas com modal de confirmação e persistência de aba/scroll.
+- **Inteligência & Gráficos:** Motor de contagem de alunos elegíveis a vagas prováveis, funil de engajamento, gráfico combinado (novos alunos vs. editais nos últimos 14 dias), Top 5 coordenadores mais ativos e gráfico de pizza alterável por ação.
+- **Auditoria & Pontuação:** Registro automático das ações de Diretoria e Coordenação (`EDITAL_CRIADO`, `EDITAL_EDITADO`, `EDITAL_PUBLICADO`, `REGRA_RETIFICADA`, `EDITAL_ARQUIVADO`, `CONTA_ATUALIZADA`).
+- **Qualidade & Demonstração:** Inclusão do `DiretoriaDemoSeeder` (idempotente, bloqueado em produção) e ampliação da suíte para **71 testes / 258 asserções** passando em SQLite e MariaDB.
+
 ## \[v0.2.0\] - 16/11/2026
 
 **Branch:** `fix/estabilidade_site`
