@@ -11,6 +11,7 @@ trait CreatesScomTestSchema
     {
         // Limpa qualquer resíduo do banco persistente (MariaDB entre testes)
         foreach ([
+            'logs_auditoria',
             'comentarios',
             'historico_retificacoes',
             'regras_elegibilidade',
@@ -101,6 +102,16 @@ trait CreatesScomTestSchema
             $table->text('texto_comentario');
             $table->timestamp('data_comentario')->useCurrent();
             $table->string('status_comentario', 20)->default('VISIVEL');
+        });
+
+        Schema::create('logs_auditoria', function (Blueprint $table) {
+            $table->increments('id');
+            $table->unsignedInteger('ator_id')->nullable();
+            $table->string('acao', 60);
+            $table->string('entidade_tipo', 40);
+            $table->unsignedInteger('entidade_id')->nullable();
+            $table->text('detalhes')->nullable();
+            $table->timestamp('criado_em')->useCurrent();
         });
     }
 }
