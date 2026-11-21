@@ -109,9 +109,7 @@ body {
         linear-gradient(
             rgba(10, 25, 47, 0.85), /* --azul-escuro com 85% de opacidade */
             rgba(0, 68, 136, 0.85)  /* --azul-primario com 85% de opacidade */
-        ),
-        url('../img/estudantes.webp'); /* Imagem de fundo */
-    
+        );
     /* Configurações de posicionamento da imagem */
     background-size: cover;
     background-position: center;
