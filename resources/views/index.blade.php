@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="scom-user-id" content="{{ auth()->id() ?? '' }}">
     <title>UNIELEGI - Motor de Elegibilidade</title>
     
     <!-- Favicon com o tipo corrigido para imagem jpeg e usando asset() -->

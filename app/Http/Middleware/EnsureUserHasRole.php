@@ -59,6 +59,11 @@ class EnsureUserHasRole
             abort(403, 'Acesso não autorizado para o seu perfil.');
         }
 
-        return $next($request);
+        $response = $next($request);
+
+        return $response->withHeaders([
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 }
