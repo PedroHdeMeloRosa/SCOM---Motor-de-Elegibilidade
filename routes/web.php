@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Coordenador\ImportacaoEditalIAController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Coordenador\GestaoEditalController;
 use App\Http\Controllers\Diretor\GestaoUsuarioController;
@@ -49,6 +50,8 @@ Route::middleware(['auth', 'perfil:COORDENADOR'])->group(function () {
     Route::post('/coordenacao/editais/{edital}/publicar', [GestaoEditalController::class, 'publicar'])->name('coordenacao.editais.publicar');
     Route::post('/coordenacao/editais/{edital}/arquivar', [GestaoEditalController::class, 'arquivar'])->name('coordenacao.editais.arquivar');
     Route::post('/coordenacao/regras/{regra}/retificar', [GestaoEditalController::class, 'retificarRegra'])->name('coordenacao.regras.retificar');
+    Route::post('/coordenacao/editais/escanear-ia', [ImportacaoEditalIAController::class, 'escanear'])
+        ->name('coordenacao.editais.escanear-ia');
 });
 
 // Rotas Exclusivas da Diretoria (Protegidas por Sessão + RBAC)
