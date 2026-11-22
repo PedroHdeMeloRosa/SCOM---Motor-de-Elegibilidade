@@ -937,7 +937,6 @@
 
                 <div class="lista-cards">
                     @forelse ($estudantes as $aluno)
-                    @php $p = $aluno->perfil; @endphp
                     <div class="card-membro nivel-estudante">
                         <div class="card-membro-topo">
                             <div class="membro-info">
@@ -971,30 +970,16 @@
                             </div>
 
                             <div>
-                                <button type="button" class="btn-expandir" data-aluno-id="{{ $aluno->id }}" onclick="toggleDetalhesAluno(this.dataset.alunoId)">
-                                    📄 Ver Ficha
-                                </button>
+                                @if ($aluno->perfil_exists)
+                                    <span class="badge badge-ativa">📋 Ficha preenchida (dados protegidos)</span>
+                                @else
+                                    <span class="badge" style="background:#f1f5f9; color:#475569;">⏳ Ficha pendente</span>
+                                @endif
                             </div>
-                        </div>
-
-                        <div id="detalhes-aluno-{{ $aluno->id }}" class="detalhes-aluno">
-                            @if ($p)
-                            <div class="grid-ficha-aluno">
-                                <div><strong>Contato (E-mail)</strong>{{ $aluno->email }}</div>
-                                <div><strong>Origem / CEP</strong>{{ $p->cidade_origem ?? '—' }}/{{ $p->estado_origem ?? '—' }} {{ $p->cep ? "({$p->cep})" : '' }}</div>
-                                <div><strong>Renda Per Capita</strong>{{ $p->renda_per_capita !== null ? 'R$ ' . number_format((float) $p->renda_per_capita, 2, ',', '.') : 'Não informada' }}</div>
-                                <div><strong>Escola / ENEM</strong>{{ $p->tipo_escola ?? '—' }} · {{ $p->nota_media_enem ? $p->nota_media_enem . ' pts' : 'Sem nota' }}</div>
-                                <div><strong>Mobilidade / Orçamento</strong>{{ $p->nivel_mobilidade ?? '—' }} · {{ $p->orcamento_moradia !== null ? 'R$ ' . number_format((float) $p->orcamento_moradia, 2, ',', '.') : '—' }}</div>
-                                <div><strong>Permanência / PcD</strong>República: {{ $p->interesse_republica ? 'Sim' : 'Não' }} · Auxílio: {{ $p->precisa_auxilio_moradia ? 'Sim' : 'Não' }} · PcD: {{ $p->pcd ? 'Sim' : 'Não' }}</div>
-                            </div>
-                            @else
-                            <p style="margin:0; font-size:0.86rem; color: var(--texto-suave);">
-                                Este estudante ainda não preencheu a ficha socioeconômica. Contato: <strong>{{ $aluno->email }}</strong>.
-                            </p>
-                            @endif
                         </div>
                     </div>
                     @empty
+                    
                     <p style="text-align:center; color: var(--texto-suave); padding: 20px;">Nenhum estudante encontrado para os filtros aplicados.</p>
                     @endforelse
                 </div>

@@ -6,32 +6,25 @@ use App\Models\Edital;
 use App\Models\LogAuditoria;
 use App\Models\User;
 use Carbon\Carbon;
+use Database\Seeders\Concerns\GuardsDemoSeeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Database\Seeders\Concerns\GuardsDemoSeeders;
+use Illuminate\Support\Str;
 
 class DiretoriaDemoSeeder extends Seeder
 {
+    use GuardsDemoSeeders;
+
     public function run(): void
     {
-
         $this->ensureDemoDatabaseIsAllowed();
-
-        $senhaPadrao = Hash::make('scom2026');    
-
-        if (app()->environment('production')) {
-            $this->command?->warn('DiretoriaDemoSeeder bloqueado em ambiente de produção.');
-            return;
-        }
-
-        $senhaPadrao = Hash::make('scom2026');
 
         // 1. Garante um diretor para assinar os logs administrativos
         $diretor = User::firstOrCreate(
             ['email' => 'diretor@unilegi.com'],
             [
                 'nome' => 'Diretoria SCOM',
-                'senha_hash' => $senhaPadrao,
+                'senha_hash' => $this->senhaAleatoriaBloqueada(),
                 'tipo_perfil' => 'DIRETOR',
                 'status_conta' => 'ATIVA',
                 'criado_em' => Carbon::today()->subDays(13),
@@ -44,7 +37,7 @@ class DiretoriaDemoSeeder extends Seeder
                 ['email' => 'lucas.rascunhos@unilegi.com'],
                 [
                     'nome' => 'Lucas Almeida (Rascunhos)',
-                    'senha_hash' => $senhaPadrao,
+                    'senha_hash' => $this->senhaAleatoriaBloqueada(),
                     'tipo_perfil' => 'COORDENADOR',
                     'status_conta' => 'ATIVA',
                     'criado_em' => Carbon::today()->subDays(12),
@@ -54,7 +47,7 @@ class DiretoriaDemoSeeder extends Seeder
                 ['email' => 'mariana.revisora@unilegi.com'],
                 [
                     'nome' => 'Mariana Costa (Revisora)',
-                    'senha_hash' => $senhaPadrao,
+                    'senha_hash' => $this->senhaAleatoriaBloqueada(),
                     'tipo_perfil' => 'COORDENADOR',
                     'status_conta' => 'ATIVA',
                     'criado_em' => Carbon::today()->subDays(11),
@@ -64,7 +57,7 @@ class DiretoriaDemoSeeder extends Seeder
                 ['email' => 'rafael.gestao@unilegi.com'],
                 [
                     'nome' => 'Rafael Souza (Gestão)',
-                    'senha_hash' => $senhaPadrao,
+                    'senha_hash' => $this->senhaAleatoriaBloqueada(),
                     'tipo_perfil' => 'COORDENADOR',
                     'status_conta' => 'ATIVA',
                     'criado_em' => Carbon::today()->subDays(10),
@@ -145,7 +138,7 @@ class DiretoriaDemoSeeder extends Seeder
                 ['email' => $email],
                 [
                     'nome' => $nome,
-                    'senha_hash' => $senhaPadrao,
+                    'senha_hash' => $this->senhaAleatoriaBloqueada(),
                     'tipo_perfil' => 'ESTUDANTE',
                     'status_conta' => $banido ? 'BANIDA' : 'ATIVA',
                     'criado_em' => $dataCadastro,
@@ -229,5 +222,10 @@ class DiretoriaDemoSeeder extends Seeder
         }
 
         $this->command?->info('DiretoriaDemoSeeder executado com sucesso!');
+    }
+
+    private function senhaAleatoriaBloqueada(): string
+    {
+        return Hash::make(Str::random(40));
     }
 }

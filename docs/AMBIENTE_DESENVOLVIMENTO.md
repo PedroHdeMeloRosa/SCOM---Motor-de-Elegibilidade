@@ -135,19 +135,25 @@ Cada pessoa mantém seu próprio `.env`. Nunca enviar credenciais pelo Git.
 
 ## 8. IA Local (Ollama) — Leitura Assistida de Editais
 
-A leitura de editais por IA é **opcional** (o cadastro manual continua funcionando normalmente se o Ollama estiver desligado). Para ativar o botão de escaneamento local na Coordenação:
+A leitura de editais por IA é **opcional**: o cadastro manual continua 100% funcional caso o serviço esteja desligado (o sistema retorna aviso `503` sem travar o formulário). Para ativar o escaneamento local na Coordenação em qualquer PC Windows, siga os passos abaixo.
 
-> **Importante (Windows):** Execute a instalação pelo **PowerShell do Windows (aberto direto pelo Menu Iniciar)**, e não pelo terminal integrado do VS Code, para evitar bloqueio de permissão (`exit code 5`) no `winget` e garantir que o comando `ollama` entre no `PATH`.
+> **Importante (Windows):** Execute a instalação pelo **PowerShell do Windows (aberto direto pelo Menu Iniciar)**, e não pelo terminal integrado do VS Code, para evitar bloqueio de permissão (`exit code 5`) no `winget` e garantir que o comando `ollama` seja adicionado ao `PATH`.
 
-1. Abra o **PowerShell** do Windows (fora do VS Code) e instale o Ollama:
+### 8.1. Instalação do Ollama
+
+1. Abra o **PowerShell** pelo Menu Iniciar e instale o Ollama:
 
 ```powershell
 winget install Ollama.Ollama --interactive
 ```
 
-*(Alternativa: baixar o instalador `OllamaSetup.exe` diretamente em `https://ollama.com/download`.)*
+*(Alternativa: baixar e executar o instalador `OllamaSetup.exe` diretamente em `https://ollama.com/download`.)*
 
-2. **Feche e abra uma nova janela do PowerShell** (e reinicie o VS Code se já estiver aberto) para carregar o `PATH`, depois verifique e baixe o modelo configurado no projeto:
+2. **Feche o PowerShell atual e abra uma nova janela** (e reinicie o VS Code, se estiver aberto) para carregar o `PATH` atualizado.
+
+### 8.2. Download do modelo e verificação do serviço
+
+No novo PowerShell, confirme a instalação e baixe o modelo homologado pelo projeto (`qwen2.5:3b`):
 
 ```powershell
 ollama --version
@@ -155,18 +161,40 @@ ollama pull qwen2.5:3b
 ollama list
 ```
 
-3. Confirme que as variáveis abaixo estão presentes no seu `.env` local:
+Teste se o servidor local do Ollama está respondendo na porta padrão (`11434`):
 
+```powershell
+Invoke-RestMethod [http://127.0.0.1:11434/api/tags](http://127.0.0.1:11434/api/tags)
+```
+
+- Se retornar a lista contendo `qwen2.5:3b`, o serviço está pronto.
+- Se retornar erro de conexão recusada, abra o aplicativo **Ollama** pelo Menu Iniciar (ele aparecerá na bandeja do sistema) ou execute `ollama serve` em um terminal separado.
+
+### 8.3. Configuração do `.env` e `.env.example`
+
+Confirme que as variáveis abaixo estão presentes no `.env.example` e configuradas no seu `.env` local:
+
+```dotenv
+# IA local (Ollama) para leitura assistida de editais (revisao humana obrigatoria)
 SCOM_AI_ENABLED=true
-SCOM_AI_URL=http://127.0.0.1:11434
+SCOM_AI_URL=[http://127.0.0.1:11434](http://127.0.0.1:11434)
 SCOM_AI_MODEL=qwen2.5:3b
 SCOM_AI_TIMEOUT=180
+```
 
-### Versões homologadas do leitor de editais (para manter paridade na equipe)
+Após salvar o `.env`, limpe o cache de configuração do Laravel:
+
+```powershell
+php artisan config:clear
+```
+
+> **Dica para PCs sem GPU (execução em CPU):** A primeira leitura do dia pode levar entre 20 e 60 segundos enquanto o modelo carrega na memória RAM. Caso ocorra timeout do PHP no XAMPP, ajuste `max_execution_time = 180` em `C:\xampp\php\php.ini` e reinicie o `php artisan serve`.
+
+### 8.4. Versões homologadas (paridade na equipe)
 
 - **Ollama:** `0.40.16` (Windows)
-- **Modelo LLM:** `qwen2.5:3b` (executado via `/api/chat` com `format: json`, `num_ctx: 4096`, `num_predict: 512`)
-- **Parser de PDF:** `smalot/pdfparser` (`^2.13`, instalado via Composer, limite de `6.000` caracteres limpos em UTF-8)
+- **Modelo LLM:** `qwen2.5:3b` (via `/api/chat` com `format: json`, `num_ctx: 4096`, `num_predict: 512`)
+- **Parser de PDF:** `smalot/pdfparser` (`^2.13`, via Composer, limite de `6.000` caracteres limpos em UTF-8)
 - **Geocodificação de campus (front-end):** OpenStreetMap Nominatim (preenchimento automático de latitude/longitude a partir de cidade e UF)
 
 ## Referências

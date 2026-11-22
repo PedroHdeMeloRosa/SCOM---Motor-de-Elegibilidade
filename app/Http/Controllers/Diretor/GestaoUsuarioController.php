@@ -188,7 +188,7 @@ class GestaoUsuarioController extends Controller
 
     private function buscarEstudantes(array $filtros): Collection
     {
-        $query = User::with('perfil')->where('tipo_perfil', 'ESTUDANTE');
+        $query = User::withExists('perfil')->where('tipo_perfil', 'ESTUDANTE');
 
         if ($filtros['perfil'] !== '' && $filtros['perfil'] !== 'ESTUDANTE') {
             return collect();
