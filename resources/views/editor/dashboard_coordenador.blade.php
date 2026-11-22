@@ -39,6 +39,42 @@
     <section class="cartao">
         <h1>Novo edital</h1>
         <p>O cadastro começa como rascunho. Depois de revisar as informações e a regra, publique o edital.</p>
+
+        <details id="box-ia-edital" style="background:#f0f6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px; margin-bottom:16px;">
+            <summary style="cursor:pointer; font-weight:700; color:#174a80;">
+                🤖 Escanear Edital com IA (PDF ou Texto) — preenchimento assistido
+            </summary>
+            <div style="margin-top:12px;">
+                <p style="margin:0 0 10px; font-size:0.9rem; color:#334155;">
+                    Envie o PDF do edital <strong>ou</strong> cole o trecho principal abaixo. A IA local apenas preenche os campos do formulário para você revisar antes de salvar.
+                </p>
+                <div class="grade">
+                    <div>
+                        <label for="ia_arquivo_pdf">Arquivo PDF (opcional, até 10 MB)</label>
+                        <input id="ia_arquivo_pdf" type="file" accept="application/pdf">
+                    </div>
+                </div>
+                <label for="ia_texto_edital">Ou cole o texto do edital</label>
+                <textarea id="ia_texto_edital" rows="4" placeholder="Cole aqui o texto do edital (instituição, prazos, renda máxima, cotas, documentos)..."></textarea>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button type="button" id="btn-escanear-ia" onclick="escanearEditalComIA()">
+                        🤖 Escanear e Preencher Formulário
+                    </button>
+                    <small id="ia-status-texto"></small>
+                </div>
+                <div id="ia-progresso-box" style="display:none; margin-top:12px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#1e3a8a; margin-bottom:4px; font-weight:600;">
+                        <span id="ia-progresso-etapa">Iniciando leitura...</span>
+                        <span id="ia-progresso-tempo">00:00</span>
+                    </div>
+                    <div style="width:100%; height:10px; background:#dbeafe; border-radius:999px; overflow:hidden;">
+                        <div id="ia-progresso-barra" style="width:5%; height:100%; background:linear-gradient(90deg, #2563eb, #0ea5e9); border-radius:999px; transition:width 0.4s ease;"></div>
+                    </div>
+                </div>
+                <div id="ia-feedback" style="display:none; margin-top:10px; padding:10px 12px; border-radius:6px; font-size:0.9rem;"></div>
+            </div>
+        </details>
+
         <form method="POST" action="{{ route('coordenacao.editais.store') }}">
             @csrf
             <div class="grade">
@@ -135,5 +171,171 @@
         {{ $editais->links() }}
     </section>
 </main>
+
+<script>
+async function escanearEditalComIA() {
+    const btn = document.getElementById('btn-escanear-ia');
+    const statusTxt = document.getElementById('ia-status-texto');
+    const feedback = document.getElementById('ia-feedback');
+    const inputPdf = document.getElementById('ia_arquivo_pdf');
+    const inputTexto = document.getElementById('ia_texto_edital');
+
+    const progressoBox = document.getElementById('ia-progresso-box');
+    const progressoBarra = document.getElementById('ia-progresso-barra');
+    const progressoEtapa = document.getElementById('ia-progresso-etapa');
+    const progressoTempo = document.getElementById('ia-progresso-tempo');
+
+    const formData = new FormData();
+    const temPdf = Boolean(inputPdf.files && inputPdf.files[0]);
+    if (temPdf) {
+        formData.append('arquivo_pdf', inputPdf.files[0]);
+    }
+    if (inputTexto.value.trim() !== '') {
+        formData.append('texto_edital', inputTexto.value.trim());
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Analisando edital...';
+    statusTxt.textContent = '';
+    feedback.style.display = 'none';
+
+    // Inicia barra de progresso e cronômetro
+    let segundos = 0;
+    let percentual = 8;
+    const etapas = temPdf
+        ? ['Lendo páginas do PDF...', 'Limpando texto extraído...', 'Consultando IA local (Ollama)...', 'Extraindo critérios e prazos...', 'Sanitizando JSON...']
+        : ['Preparando texto...', 'Consultando IA local (Ollama)...', 'Extraindo critérios e prazos...', 'Sanitizando JSON...'];
+
+    progressoBox.style.display = 'block';
+    progressoBarra.style.background = 'linear-gradient(90deg, #2563eb, #0ea5e9)';
+    progressoBarra.style.width = percentual + '%';
+    progressoEtapa.textContent = etapas[0];
+    progressoTempo.textContent = '00:00';
+
+    const timer = setInterval(() => {
+        segundos++;
+        const mm = String(Math.floor(segundos / 60)).padStart(2, '0');
+        const ss = String(segundos % 60).padStart(2, '0');
+        progressoTempo.textContent = `${mm}:${ss}`;
+
+        // Avança suavemente até 92% (desacelerando perto do fim)
+        if (percentual < 92) {
+            percentual += percentual < 50 ? 4 : (percentual < 80 ? 1.5 : 0.4);
+            progressoBarra.style.width = Math.min(92, percentual).toFixed(1) + '%';
+        }
+        const idxEtapa = Math.min(etapas.length - 1, Math.floor(segundos / 4));
+        progressoEtapa.textContent = etapas[idxEtapa];
+    }, 1000);
+
+    try {
+        const res = await fetch("{{ route('coordenacao.editais.escanear-ia') }}", {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: formData
+        });
+
+        const json = await res.json();
+
+        if (!res.ok || !json.sucesso) {
+            throw new Error(json.mensagem || json.message || 'Não foi possível analisar o edital.');
+        }
+
+        clearInterval(timer);
+        progressoBarra.style.width = '100%';
+        progressoBarra.style.background = '#16a34a';
+        progressoEtapa.textContent = 'Análise concluída!';
+
+        preencherFormularioComIA(json.dados || {});
+        feedback.style.display = 'block';
+        feedback.style.background = '#dcfce7';
+        feedback.style.color = '#166534';
+        feedback.textContent = '✅ ' + (json.aviso || 'Campos preenchidos. Revise antes de salvar.');
+    } catch (erro) {
+        clearInterval(timer);
+        progressoBarra.style.width = '100%';
+        progressoBarra.style.background = '#dc2626';
+        progressoEtapa.textContent = 'Falha na análise.';
+
+        feedback.style.display = 'block';
+        feedback.style.background = '#fee2e2';
+        feedback.style.color = '#991b1b';
+        feedback.textContent = '⚠️ ' + erro.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🤖 Escanear e Preencher Formulário';
+    }
+}
+
+function preencherFormularioComIA(dados) {
+    const aplicarValor = (id, valor) => {
+        if (valor === null || valor === undefined || valor === '') return;
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = valor;
+        el.style.borderColor = '#2563eb';
+        el.style.backgroundColor = '#eff6ff';
+    };
+
+    aplicarValor('instituicao', dados.instituicao);
+    aplicarValor('nome_processo', dados.nome_processo);
+    aplicarValor('cidade', dados.cidade);
+    aplicarValor('estado', dados.estado);
+    aplicarValor('regiao', dados.regiao);
+    aplicarValor('ano_referencia', dados.ano_referencia);
+    aplicarValor('custo_medio_republica', dados.custo_medio_republica);
+    aplicarValor('link_documento', dados.link_documento);
+
+    if (dados.tem_moradia_estudantil !== null && dados.tem_moradia_estudantil !== undefined) {
+        aplicarValor('tem_moradia_estudantil', dados.tem_moradia_estudantil ? '1' : '0');
+    }
+
+    const regra = dados.regra || {};
+    aplicarValor('tipo_beneficio', regra.tipo_beneficio);
+    aplicarValor('renda_maxima_per_capita', regra.renda_maxima_per_capita);
+    aplicarValor('nota_corte_estimada', regra.nota_corte_estimada);
+    aplicarValor('prazo_inicio', regra.prazo_inicio);
+    aplicarValor('prazo_fim', regra.prazo_fim);
+    aplicarValor('documentos_exigidos', regra.documentos_exigidos);
+
+    const aplicarCheckbox = (nome, marcado) => {
+        const cb = document.querySelector(`input[type="checkbox"][name="${nome}"]`);
+        if (cb) cb.checked = Boolean(marcado);
+    };
+
+    aplicarCheckbox('regra[exige_escola_publica]', regra.exige_escola_publica);
+    aplicarCheckbox('regra[exige_etnia]', regra.exige_etnia);
+    aplicarCheckbox('regra[exige_pcd]', regra.exige_pcd);
+
+    if (dados.cidade && dados.estado) {
+        buscarCoordenadasCampus(dados.cidade, dados.estado);
+    }
+
+    async function buscarCoordenadasCampus(cidade, estado) {
+    const inputLat = document.getElementById('latitude');
+    const inputLng = document.getElementById('longitude');
+    if (!inputLat || !inputLng) return;
+
+    try {
+        const query = `${cidade}, ${estado}, Brazil`;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+        const locais = await res.json();
+
+        if (Array.isArray(locais) && locais.length > 0) {
+            inputLat.value = Number(locais[0].lat).toFixed(6);
+            inputLng.value = Number(locais[0].lon).toFixed(6);
+            inputLat.style.borderColor = '#2563eb';
+            inputLat.style.backgroundColor = '#eff6ff';
+            inputLng.style.borderColor = '#2563eb';
+            inputLng.style.backgroundColor = '#eff6ff';
+        }
+    } catch (e) {
+        console.warn('Não foi possível obter coordenadas automaticamente:', e);
+    }
+}
+}
+</script>
 </body>
 </html>
