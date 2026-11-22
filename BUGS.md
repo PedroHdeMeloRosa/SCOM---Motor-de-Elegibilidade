@@ -27,6 +27,13 @@
   - Correção de tipagem (`toArray()`) na chamada de `AvaliadorElegibilidade::avaliar()` e adequação do `DiretoriaDemoSeeder` aos valores válidos do `ENUM` `nivel_mobilidade`
   - Suíte ampliada para **71 testes / 258 asserções** passando em SQLite e MariaDB
 
+- [x] **IA para leitura assistida de editais (`feat/ai-edital-import`)**:
+  - Integração com `smalot/pdfparser` e Ollama local (`qwen2.5:3b` via `/api/chat` com `format: json`)
+  - Serviços `ExtratorTextoEdital` e `AnalisadorEditalIA` com sanitização estrita de JSON, bloqueio de links `javascript:` e validação de enums/datas
+  - Endpoint `POST /coordenacao/editais/escanear-ia` restrito a `COORDENADOR` com fallback gracioso (`503`) quando o Ollama está offline
+  - Botão recolhível *"Escanear Edital com IA"* no painel da Coordenação mantendo revisão humana obrigatória e fluxo manual intacto
+  - Guia de instalação do Ollama no Windows adicionado em `docs/AMBIENTE_DESENVOLVIMENTO.md` e suíte ampliada para **77 testes / 272 asserções**
+
 ## Nota de ambiente (não bloqueia merge)
 
 - [x] `public/hot` pode falhar ao ser gravado pelo Vite quando o repositório é clonado dentro do OneDrive (bloqueio de sincronização do Windows). Contornado mantendo o projeto fora do OneDrive (ex.: `C:\xampp\htdocs\...`) e mantendo `/public/hot` no `.gitignore`.
@@ -35,7 +42,7 @@
 
 - [ ] **Inteligência de editais e auditoria avançada (`feat/diretoria-ranking-auditoria`)** — Ranking de Editais na Visão Geral (elegíveis prováveis, comentários e alertas de prazo), filtros por ação/responsável na aba Auditoria e exportação em CSV
 - [ ] **Novas funcionalidades da área do estudante** — melhorias de experiência e recursos adicionais (ex.: favoritos) em branch dedicada
-- [ ] **IA para leitura de editais (`feat/ai-edital-import`)** — sujeito a decisão do grupo, mantendo revisão humana obrigatória.
+
 
 ## Backlog futuro (fora do escopo atual)
 - [ ] **Governança colegiada da Diretoria (`50% + 1`)** — removido do escopo atual; mantido apenas como planejamento futuro caso haja necessidade de aprovação por maioria para alterar/remover contas `DIRETOR`

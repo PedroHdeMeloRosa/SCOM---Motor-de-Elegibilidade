@@ -2,6 +2,12 @@
 
 Este documento regista as modificações estruturais, implementações e decisões arquiteturais do projeto.
 
+### [feat/ai-edital-import] - 2026-11-21
+- **Leitura Assistida por IA Local:** Integração com `smalot/pdfparser` e Ollama (`qwen2.5:3b`) via HTTP para extração estruturada de dados de editais (PDF ou texto).
+- **Segurança & Sanitização:** Rota `POST /coordenacao/editais/escanear-ia` protegida por RBAC (`COORDENADOR`), validação de MIME/tamanho (PDF até 10 MB), descarte automático de campos/links inválidos e fallback amigável (`503`) mantendo o cadastro manual 100% operacional.
+- **Interface da Coordenação:** Adição do bloco recolhível *"Escanear Edital com IA"* em `dashboard_coordenador.blade.php` preenchendo o formulário existente com destaque visual e revisão humana obrigatória.
+- **Qualidade & Documentação:** Inclusão da suíte `ImportacaoEditalIATest` (totalizando **77 testes / 272 asserções** em SQLite e MariaDB) e guia de instalação do Ollama em `docs/AMBIENTE_DESENVOLVIMENTO.md`.
+
 ### [feat/interface-diretoria] - 2026-11-21
 - **Banco de Dados (Migration Aditiva):** Criação da tabela `logs_auditoria` (`ator_id`, `acao`, `entidade_tipo`, `entidade_id`, `detalhes`, `criado_em`) e model `LogAuditoria`.
 - **Painel da Diretoria:** Redesign em 4 abas (*Visão Geral*, *Estudantes*, *Equipe & Pontuação* e *Auditoria*) com identidade visual institucional, cards flutuantes por nível de acesso, ficha socioeconômica expansível e badges interativas com modal de confirmação e persistência de aba/scroll.
