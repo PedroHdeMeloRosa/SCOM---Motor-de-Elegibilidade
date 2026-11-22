@@ -1,3 +1,4 @@
+..
 # Organização e fluxo de desenvolvimento
 
 Regras básicas para manter o SCOM organizado, seguro e fácil de evoluir.
