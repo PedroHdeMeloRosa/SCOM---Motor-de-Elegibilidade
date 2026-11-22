@@ -7,7 +7,8 @@
     <title>UNILEGI - Painel do Estudante</title>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('assets/img/UNIELEGI LOGO 2026.svg') }}">
+    <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/UNIELEGI logo.jpg') }}?v=2">
+<link rel="shortcut icon" type="image/jpeg" href="{{ asset('assets/img/UNIELEGI logo.jpg') }}?v=2">
 
     <!-- Motor Vite (Bootstrap e Alpine) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
