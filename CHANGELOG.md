@@ -1,12 +1,12 @@
 # CHANGELOG - SCOM Motor de Elegibilidade
 
 Este documento regista as modificações estruturais, implementações e decisões arquiteturais do projeto.
-
 ### [feat/ai-edital-import] - 2026-11-21
-- **Leitura Assistida por IA Local:** Integração com `smalot/pdfparser` e Ollama (`qwen2.5:3b`) via HTTP para extração estruturada de dados de editais (PDF ou texto).
-- **Segurança & Sanitização:** Rota `POST /coordenacao/editais/escanear-ia` protegida por RBAC (`COORDENADOR`), validação de MIME/tamanho (PDF até 10 MB), descarte automático de campos/links inválidos e fallback amigável (`503`) mantendo o cadastro manual 100% operacional.
-- **Interface da Coordenação:** Adição do bloco recolhível *"Escanear Edital com IA"* em `dashboard_coordenador.blade.php` preenchendo o formulário existente com destaque visual e revisão humana obrigatória.
-- **Qualidade & Documentação:** Inclusão da suíte `ImportacaoEditalIATest` (totalizando **77 testes / 272 asserções** em SQLite e MariaDB) e guia de instalação do Ollama em `docs/AMBIENTE_DESENVOLVIMENTO.md`.
+
+- **Motor de Leitura Assistida por IA Local:** Integração com `smalot/pdfparser` (`^2.13`) e Ollama (`0.40.16` / `qwen2.5:3b`) para extração estruturada de editais via PDF ou texto colado.
+- **Resiliência e Otimização de PDF:** Normalização UTF-8, recorte seguro em `6.000` caracteres, ajuste de contexto (`num_ctx: 4096`) para evitar HTTP 500 em CPU e fallback amigável (`503`) quando a IA estiver offline.
+- **UX na Coordenação (sem alterar o fluxo manual):** Bloco recolhível *"Escanear Edital com IA"* com barra de progresso, cronômetro de execução, destaque visual nos campos sugeridos e busca automática de latitude/longitude via OpenStreetMap Nominatim.
+- **Testes e Documentação:** Suíte `ImportacaoEditalIATest` cobrindo RBAC, validação de MIME, sanitização e fallback (**77 testes / 272 asserções** em SQLite e MariaDB) + guia de versões homologadas em `docs/AMBIENTE_DESENVOLVIMENTO.md`.
 
 ### [feat/interface-diretoria] - 2026-11-21
 - **Banco de Dados (Migration Aditiva):** Criação da tabela `logs_auditoria` (`ator_id`, `acao`, `entidade_tipo`, `entidade_id`, `detalhes`, `criado_em`) e model `LogAuditoria`.

@@ -62,6 +62,15 @@
                     </button>
                     <small id="ia-status-texto"></small>
                 </div>
+                <div id="ia-progresso-box" style="display:none; margin-top:12px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#1e3a8a; margin-bottom:4px; font-weight:600;">
+                        <span id="ia-progresso-etapa">Iniciando leitura...</span>
+                        <span id="ia-progresso-tempo">00:00</span>
+                    </div>
+                    <div style="width:100%; height:10px; background:#dbeafe; border-radius:999px; overflow:hidden;">
+                        <div id="ia-progresso-barra" style="width:5%; height:100%; background:linear-gradient(90deg, #2563eb, #0ea5e9); border-radius:999px; transition:width 0.4s ease;"></div>
+                    </div>
+                </div>
                 <div id="ia-feedback" style="display:none; margin-top:10px; padding:10px 12px; border-radius:6px; font-size:0.9rem;"></div>
             </div>
         </details>
@@ -171,8 +180,14 @@ async function escanearEditalComIA() {
     const inputPdf = document.getElementById('ia_arquivo_pdf');
     const inputTexto = document.getElementById('ia_texto_edital');
 
+    const progressoBox = document.getElementById('ia-progresso-box');
+    const progressoBarra = document.getElementById('ia-progresso-barra');
+    const progressoEtapa = document.getElementById('ia-progresso-etapa');
+    const progressoTempo = document.getElementById('ia-progresso-tempo');
+
     const formData = new FormData();
-    if (inputPdf.files && inputPdf.files[0]) {
+    const temPdf = Boolean(inputPdf.files && inputPdf.files[0]);
+    if (temPdf) {
         formData.append('arquivo_pdf', inputPdf.files[0]);
     }
     if (inputTexto.value.trim() !== '') {
@@ -181,8 +196,36 @@ async function escanearEditalComIA() {
 
     btn.disabled = true;
     btn.textContent = '⏳ Analisando edital...';
-    statusTxt.textContent = 'Consultando IA local (pode levar alguns segundos)...';
+    statusTxt.textContent = '';
     feedback.style.display = 'none';
+
+    // Inicia barra de progresso e cronômetro
+    let segundos = 0;
+    let percentual = 8;
+    const etapas = temPdf
+        ? ['Lendo páginas do PDF...', 'Limpando texto extraído...', 'Consultando IA local (Ollama)...', 'Extraindo critérios e prazos...', 'Sanitizando JSON...']
+        : ['Preparando texto...', 'Consultando IA local (Ollama)...', 'Extraindo critérios e prazos...', 'Sanitizando JSON...'];
+
+    progressoBox.style.display = 'block';
+    progressoBarra.style.background = 'linear-gradient(90deg, #2563eb, #0ea5e9)';
+    progressoBarra.style.width = percentual + '%';
+    progressoEtapa.textContent = etapas[0];
+    progressoTempo.textContent = '00:00';
+
+    const timer = setInterval(() => {
+        segundos++;
+        const mm = String(Math.floor(segundos / 60)).padStart(2, '0');
+        const ss = String(segundos % 60).padStart(2, '0');
+        progressoTempo.textContent = `${mm}:${ss}`;
+
+        // Avança suavemente até 92% (desacelerando perto do fim)
+        if (percentual < 92) {
+            percentual += percentual < 50 ? 4 : (percentual < 80 ? 1.5 : 0.4);
+            progressoBarra.style.width = Math.min(92, percentual).toFixed(1) + '%';
+        }
+        const idxEtapa = Math.min(etapas.length - 1, Math.floor(segundos / 4));
+        progressoEtapa.textContent = etapas[idxEtapa];
+    }, 1000);
 
     try {
         const res = await fetch("{{ route('coordenacao.editais.escanear-ia') }}", {
@@ -200,12 +243,22 @@ async function escanearEditalComIA() {
             throw new Error(json.mensagem || json.message || 'Não foi possível analisar o edital.');
         }
 
+        clearInterval(timer);
+        progressoBarra.style.width = '100%';
+        progressoBarra.style.background = '#16a34a';
+        progressoEtapa.textContent = 'Análise concluída!';
+
         preencherFormularioComIA(json.dados || {});
         feedback.style.display = 'block';
         feedback.style.background = '#dcfce7';
         feedback.style.color = '#166534';
         feedback.textContent = '✅ ' + (json.aviso || 'Campos preenchidos. Revise antes de salvar.');
     } catch (erro) {
+        clearInterval(timer);
+        progressoBarra.style.width = '100%';
+        progressoBarra.style.background = '#dc2626';
+        progressoEtapa.textContent = 'Falha na análise.';
+
         feedback.style.display = 'block';
         feedback.style.background = '#fee2e2';
         feedback.style.color = '#991b1b';
@@ -213,7 +266,6 @@ async function escanearEditalComIA() {
     } finally {
         btn.disabled = false;
         btn.textContent = '🤖 Escanear e Preencher Formulário';
-        statusTxt.textContent = '';
     }
 }
 
@@ -256,6 +308,33 @@ function preencherFormularioComIA(dados) {
     aplicarCheckbox('regra[exige_escola_publica]', regra.exige_escola_publica);
     aplicarCheckbox('regra[exige_etnia]', regra.exige_etnia);
     aplicarCheckbox('regra[exige_pcd]', regra.exige_pcd);
+
+    if (dados.cidade && dados.estado) {
+        buscarCoordenadasCampus(dados.cidade, dados.estado);
+    }
+
+    async function buscarCoordenadasCampus(cidade, estado) {
+    const inputLat = document.getElementById('latitude');
+    const inputLng = document.getElementById('longitude');
+    if (!inputLat || !inputLng) return;
+
+    try {
+        const query = `${cidade}, ${estado}, Brazil`;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+        const locais = await res.json();
+
+        if (Array.isArray(locais) && locais.length > 0) {
+            inputLat.value = Number(locais[0].lat).toFixed(6);
+            inputLng.value = Number(locais[0].lon).toFixed(6);
+            inputLat.style.borderColor = '#2563eb';
+            inputLat.style.backgroundColor = '#eff6ff';
+            inputLng.style.borderColor = '#2563eb';
+            inputLng.style.backgroundColor = '#eff6ff';
+        }
+    } catch (e) {
+        console.warn('Não foi possível obter coordenadas automaticamente:', e);
+    }
+}
 }
 </script>
 </body>

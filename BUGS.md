@@ -28,11 +28,11 @@
   - Suíte ampliada para **71 testes / 258 asserções** passando em SQLite e MariaDB
 
 - [x] **IA para leitura assistida de editais (`feat/ai-edital-import`)**:
-  - Integração com `smalot/pdfparser` e Ollama local (`qwen2.5:3b` via `/api/chat` com `format: json`)
-  - Serviços `ExtratorTextoEdital` e `AnalisadorEditalIA` com sanitização estrita de JSON, bloqueio de links `javascript:` e validação de enums/datas
-  - Endpoint `POST /coordenacao/editais/escanear-ia` restrito a `COORDENADOR` com fallback gracioso (`503`) quando o Ollama está offline
-  - Botão recolhível *"Escanear Edital com IA"* no painel da Coordenação mantendo revisão humana obrigatória e fluxo manual intacto
-  - Guia de instalação do Ollama no Windows adicionado em `docs/AMBIENTE_DESENVOLVIMENTO.md` e suíte ampliada para **77 testes / 272 asserções**
+  - Integração com `smalot/pdfparser` (`^2.13`) e Ollama local (`0.40.16` + `qwen2.5:3b`) via `/api/chat` com `format: json`, `num_ctx: 4096` e limite de `6.000` caracteres em UTF-8
+  - Serviços `ExtratorTextoEdital` e `AnalisadorEditalIA` com sanitização estrita de JSON, bloqueio de links inválidos e log detalhado de erros HTTP do Ollama
+  - Endpoint `POST /coordenacao/editais/escanear-ia` restrito a `COORDENADOR` com fallback gracioso (`503`) mantendo o fluxo manual 100% operacional
+  - Bloco recolhível *"Escanear Edital com IA"* na Coordenação com barra de progresso/cronômetro, preenchimento automático de latitude/longitude via Nominatim e revisão humana obrigatória
+  - Documentação das versões exatas do Ollama/modelo em `docs/AMBIENTE_DESENVOLVIMENTO.md` e suíte ampliada para **77 testes / 272 asserções** (SQLite e MariaDB)
 
 ## Nota de ambiente (não bloqueia merge)
 

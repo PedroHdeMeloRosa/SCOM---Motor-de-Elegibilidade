@@ -143,6 +143,33 @@ A leitura de editais por IA é **opcional** (o cadastro manual continua funciona
 
 ```powershell
 winget install Ollama.Ollama --interactive
+```
+
+*(Alternativa: baixar o instalador `OllamaSetup.exe` diretamente em `https://ollama.com/download`.)*
+
+2. **Feche e abra uma nova janela do PowerShell** (e reinicie o VS Code se já estiver aberto) para carregar o `PATH`, depois verifique e baixe o modelo configurado no projeto:
+
+```powershell
+ollama --version
+ollama pull qwen2.5:3b
+ollama list
+```
+
+3. Confirme que as variáveis abaixo estão presentes no seu `.env` local:
+
+```dotenv
+SCOM_AI_ENABLED=true
+SCOM_AI_URL=[http://127.0.0.1:11434](http://127.0.0.1:11434)
+SCOM_AI_MODEL=qwen2.5:3b
+SCOM_AI_TIMEOUT=180
+```
+
+### Versões homologadas do leitor de editais (para manter paridade na equipe)
+
+- **Ollama:** `0.40.16` (Windows)
+- **Modelo LLM:** `qwen2.5:3b` (executado via `/api/chat` com `format: json`, `num_ctx: 4096`, `num_predict: 512`)
+- **Parser de PDF:** `smalot/pdfparser` (`^2.13`, instalado via Composer, limite de `6.000` caracteres limpos em UTF-8)
+- **Geocodificação de campus (front-end):** OpenStreetMap Nominatim (preenchimento automático de latitude/longitude a partir de cidade e UF)
 
 ## Referências
 
@@ -150,3 +177,4 @@ winget install Ollama.Ollama --interactive
 - [Composer](https://getcomposer.org/doc/)
 - [Node.js](https://nodejs.org/en/download)
 - [XAMPP](https://www.apachefriends.org/)
+- [Ollama](https://ollama.com/download)

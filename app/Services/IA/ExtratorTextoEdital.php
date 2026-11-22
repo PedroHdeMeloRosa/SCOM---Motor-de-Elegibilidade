@@ -9,7 +9,7 @@ use Throwable;
 
 class ExtratorTextoEdital
 {
-    public const LIMITE_CARACTERES = 14000;
+    public const LIMITE_CARACTERES = 6000;
 
     public function extrairDePdf(UploadedFile $arquivo): string
     {
@@ -32,6 +32,7 @@ class ExtratorTextoEdital
 
     public function limparTexto(string $texto, int $limite = self::LIMITE_CARACTERES): string
     {
+        $texto = mb_convert_encoding($texto, 'UTF-8', 'UTF-8');
         // Remove caracteres de controle e normaliza espaços/quebras excessivas
         $limpo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', ' ', $texto) ?? $texto;
         $limpo = preg_replace("/[ \t]+/u", ' ', $limpo) ?? $limpo;

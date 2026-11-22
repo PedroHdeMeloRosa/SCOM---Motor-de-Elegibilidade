@@ -8,6 +8,8 @@ use RuntimeException;
 
 class AnalisadorEditalIA
 {
+
+    
     private const REGIOES_VALIDAS = [
         'SUDESTE', 'SUL', 'CENTRO_OESTE', 'NORDESTE', 'NORTE', 'INTERNACIONAL',
     ];
@@ -38,6 +40,8 @@ class AnalisadorEditalIA
                     'format' => 'json',
                     'options' => [
                         'temperature' => 0.1,
+                        'num_ctx' => 4096,
+                        'num_predict' => 512,
                     ],
                     'messages' => [
                         ['role' => 'system', 'content' => $this->montarSystemPrompt()],
@@ -49,7 +53,12 @@ class AnalisadorEditalIA
         }
 
         if (!$response->successful()) {
-            throw new RuntimeException('A IA local retornou erro (HTTP ' . $response->status() . '). Verifique se o modelo "' . $modelo . '" está instalado no Ollama.');
+            \Illuminate\Support\Facades\Log::error('scom.ia.ollama_erro_http', [
+                'status' => $response->status(),
+                'body' => mb_substr($response->body(), 0, 500),
+            ]);
+
+            throw new RuntimeException('A IA local retornou erro (HTTP ' . $response->status() . '). Verifique o laravel.log para detalhes.');
         }
 
         $conteudo = $response->json('message.content') ?? $response->json('response');
@@ -105,6 +114,15 @@ PROMPT;
      */
     private function sanitizarSugestao(array $dados): array
     {
+
+    if (!isset($dados['instituicao']) && !isset($dados['nome_processo'])) {
+            foreach (['edital', 'dados', 'resultado', 'data'] as $chaveWrapper) {
+                if (isset($dados[$chaveWrapper]) && is_array($dados[$chaveWrapper])) {
+                    $dados = $dados[$chaveWrapper];
+                    break;
+                }
+            }
+            }    
         $regraBruta = is_array($dados['regra'] ?? null) ? $dados['regra'] : [];
 
         $estado = $this->textoLimpo($dados['estado'] ?? null, 2);
