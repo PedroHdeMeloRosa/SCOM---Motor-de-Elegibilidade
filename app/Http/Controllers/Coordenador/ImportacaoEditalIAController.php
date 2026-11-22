@@ -70,7 +70,8 @@ class ImportacaoEditalIAController extends Controller
         return response()->json([
             'sucesso' => true,
             'dados' => $sugestao,
-            'aviso' => 'Sugestão gerada por IA local. Revise todos os campos (incluindo latitude/longitude e critérios) antes de salvar como rascunho.',
+            'texto_extraido' => $textoLimpo,
+            'aviso' => 'Sugestão gerada por IA local. Revise os trechos grifados à esquerda antes de salvar como rascunho.',
         ]);
     }
 }

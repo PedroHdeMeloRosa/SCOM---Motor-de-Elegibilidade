@@ -25,6 +25,7 @@ class Edital extends Model
         'tem_moradia_estudantil',
         'ano_referencia',
         'link_documento',
+        'arquivo_pdf',
         'status_publicacao',
     ];
 
