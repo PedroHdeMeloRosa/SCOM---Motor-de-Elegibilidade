@@ -133,6 +133,17 @@ Os testes que usam banco devem apontar para uma base exclusiva, como `scom_test`
 
 Cada pessoa mantém seu próprio `.env`. Nunca enviar credenciais pelo Git.
 
+## 8. IA Local (Ollama) — Leitura Assistida de Editais
+
+A leitura de editais por IA é **opcional** (o cadastro manual continua funcionando normalmente se o Ollama estiver desligado). Para ativar o botão de escaneamento local na Coordenação:
+
+> **Importante (Windows):** Execute a instalação pelo **PowerShell do Windows (aberto direto pelo Menu Iniciar)**, e não pelo terminal integrado do VS Code, para evitar bloqueio de permissão (`exit code 5`) no `winget` e garantir que o comando `ollama` entre no `PATH`.
+
+1. Abra o **PowerShell** do Windows (fora do VS Code) e instale o Ollama:
+
+```powershell
+winget install Ollama.Ollama --interactive
+
 ## Referências
 
 - [Laravel 13](https://laravel.com/docs/13.x)
