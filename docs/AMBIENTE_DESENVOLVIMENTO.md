@@ -157,12 +157,10 @@ ollama list
 
 3. Confirme que as variáveis abaixo estão presentes no seu `.env` local:
 
-```dotenv
 SCOM_AI_ENABLED=true
-SCOM_AI_URL=[http://127.0.0.1:11434](http://127.0.0.1:11434)
+SCOM_AI_URL=http://127.0.0.1:11434
 SCOM_AI_MODEL=qwen2.5:3b
 SCOM_AI_TIMEOUT=180
-```
 
 ### Versões homologadas do leitor de editais (para manter paridade na equipe)
 

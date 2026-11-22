@@ -8,11 +8,17 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Database\Seeders\Concerns\GuardsDemoSeeders;
 
 class DiretoriaDemoSeeder extends Seeder
 {
     public function run(): void
     {
+
+        $this->ensureDemoDatabaseIsAllowed();
+
+        $senhaPadrao = Hash::make('scom2026');    
+
         if (app()->environment('production')) {
             $this->command?->warn('DiretoriaDemoSeeder bloqueado em ambiente de produção.');
             return;

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class GestaoEditalController extends Controller
 {
@@ -191,9 +192,11 @@ class GestaoEditalController extends Controller
 
         $caminhoPdf = $edital->arquivo_pdf;
         if ($request->hasFile('arquivo_pdf')) {
+            if ($caminhoPdf && Storage::disk('local')->exists($caminhoPdf)) {
+                Storage::disk('local')->delete($caminhoPdf);
+            }
             $caminhoPdf = $request->file('arquivo_pdf')->store('editais', 'local');
-        }
-
+        }   
         $edital->update([
             'instituicao' => trim($dados['instituicao']),
             'nome_processo' => trim($dados['nome_processo']),
