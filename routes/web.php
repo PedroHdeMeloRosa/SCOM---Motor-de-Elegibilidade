@@ -31,6 +31,9 @@ Route::middleware(['auth', 'perfil:ESTUDANTE'])->group(function () {
     Route::get('/estudante/editais/{edital}', [EditalPublicoController::class, 'show'])
         ->name('estudante.editais.show');
 
+    Route::get('/estudante/editais/{edital}/pdf', [\App\Http\Controllers\Estudante\EditalPublicoController::class, 'baixarPdf'])
+    ->name('estudante.editais.pdf');
+
 });
 
 // APIs sempre retornam JSON, inclusive quando a sessão expirou.

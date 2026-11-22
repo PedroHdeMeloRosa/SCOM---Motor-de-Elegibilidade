@@ -68,6 +68,7 @@ trait CreatesScomTestSchema
             $table->unsignedSmallInteger('ano_referencia');
             $table->string('link_documento', 255)->nullable();
             $table->string('status_publicacao', 20)->default('PUBLICADO');
+            $table->string('arquivo_pdf', 255)->nullable();
             $table->timestamp('criado_em')->nullable();
         });
 

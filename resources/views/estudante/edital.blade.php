@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="scom-user-id" content="{{ auth()->id() ?? '' }}">
     <title>{{ $edital->instituicao }} - {{ $edital->nome_processo }}</title>
+    <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/favicon-uniele.jpg') }}?v=2">
     <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -13,6 +13,18 @@
         .cartao { background: #fff; border: 1px solid #dce2ea; border-radius: 10px; padding: 22px; margin-bottom: 18px; }
         .voltar { display: inline-block; margin: 20px 4%; }
         dt { font-weight: 700; margin-top: 12px; } dd { margin-left: 0; }
+        .btn-pdf {
+            display: inline-block;
+            background: #004488;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-right: 12px;
+            margin-top: 4px;
+        }
+        .btn-pdf:hover { background: #003366; color: #fff; }
     </style>
 </head>
 <body>
@@ -29,10 +41,15 @@
             <dt>Custo médio de república</dt><dd>{{ $edital->custo_medio_republica === null ? 'Não informado' : 'R$ '.number_format((float) $edital->custo_medio_republica, 2, ',', '.') }}</dd>
             <dt>Documento de referência</dt>
             <dd>
+                @if ($edital->arquivo_pdf)
+                    <a href="{{ route('estudante.editais.pdf', $edital) }}" target="_blank" rel="noopener noreferrer" class="btn-pdf">
+                        📄 Abrir / Baixar Cópia do Edital (PDF)
+                    </a>
+                @endif
                 @if ($edital->link_documento && filter_var($edital->link_documento, FILTER_VALIDATE_URL) && in_array(parse_url($edital->link_documento, PHP_URL_SCHEME), ['http', 'https'], true))
-                    <a href="{{ $edital->link_documento }}" target="_blank" rel="noopener noreferrer">Consultar documento informado</a>
-                @else
-                    Não há um link externo válido cadastrado. Consulte a página oficial da instituição.
+                    <a href="{{ $edital->link_documento }}" target="_blank" rel="noopener noreferrer">Consultar link oficial externo →</a>
+                @elseif (!$edital->arquivo_pdf)
+                    Não há um documento ou link externo válido cadastrado. Consulte a página oficial da instituição.
                 @endif
             </dd>
         </dl>
