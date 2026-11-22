@@ -1,6 +1,10 @@
 # CHANGELOG - SCOM Motor de Elegibilidade
 
 Este documento regista as modificações estruturais, implementações e decisões arquiteturais do projeto.
+### [feat/ai-edital-import] - 2026-11-22
+- **Painel da Diretoria (`GestaoUsuarioController` e `dashboard_diretor.blade.php`):** Refatoração do controller em métodos dedicados, inclusão de filtros por prefixo/grupo alfabético (atalhos A–Z e campo livre) e ordenação crescente/decrescente (data de adição e alfabética) para Estudantes e Equipe, legenda explicativa da pontuação (`PTS`) sincronizada com os pesos do backend, e navegação da Auditoria por data específica (calendário, setas de dia anterior/próximo, botão *Hoje* e agrupamento diário).
+- **Refinamentos de UI:** Favicon `favicon-uniele.jpg` recortado para maior nitidez, aumento do logo no cabeçalho da Diretoria, correção definitiva de contraste no `:hover` dos botões e eliminação dos falsos positivos de linter no Blade.
+
 ### [feat/ai-edital-import] - 2026-11-21
 
 - **Motor de Leitura Assistida por IA Local:** Integração com `smalot/pdfparser` (`^2.13`) e Ollama (`0.40.16` / `qwen2.5:3b`) para extração estruturada de editais via PDF ou texto colado.

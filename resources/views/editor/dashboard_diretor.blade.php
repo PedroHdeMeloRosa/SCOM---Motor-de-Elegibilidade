@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>SCOM · Painel da Diretoria</title>
     <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
-    <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/UNIELEGI logo.jpg') }}?v=2">
+    <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/favicon-uniele.jpg') }}?v=2">
     <link rel="shortcut icon" type="image/jpeg" href="{{ asset('assets/img/favicon-uniele.jpg') }}?v=2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -29,7 +29,7 @@
             margin: 0;
         }
 
-        /* Cabeçalho com faixa vermelha e logo da Diretoria */
+        /* Cabeçalho */
         .cabecalho {
             background: var(--azul-topo);
             border-bottom: 4px solid var(--vermelho-detalhe);
@@ -215,7 +215,7 @@
             color: var(--texto-suave);
         }
 
-        /* Cartões e Grid secundário da Visão Geral */
+        /* Cartões e Grid */
         .cartao {
             background: #fff;
             border: 1px solid var(--borda);
@@ -280,10 +280,9 @@
             position: relative;
             height: 260px;
             width: 100%;
-            margin-bottom: 20px;
         }
 
-        /* Barra de filtros */
+        /* Barra de filtros e atalho A–Z */
         .barra-filtros {
             display: flex;
             flex-wrap: wrap;
@@ -293,11 +292,12 @@
             border: 1px solid var(--borda);
             padding: 12px 14px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
         .barra-filtros input[type="text"],
-        .barra-filtros select {
+        .barra-filtros select,
+        .barra-filtros input[type="date"] {
             padding: 8px 12px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
@@ -305,9 +305,39 @@
             background: #fff;
         }
 
-        .barra-filtros input[type="text"] {
+        .barra-filtros input[name="busca"] {
             flex: 1;
-            min-width: 210px;
+            min-width: 200px;
+        }
+
+        .input-prefixo {
+            width: 195px;
+        }
+
+        .atalho-letras {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 18px;
+        }
+
+        .letra-pill {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--borda);
+            background: #fff;
+            color: var(--texto-principal);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+
+        .letra-pill:hover,
+        .letra-pill.ativa {
+            background: var(--azul-primario) !important;
+            color: #fff !important;
+            border-color: var(--azul-primario) !important;
         }
 
         .btn-primario {
@@ -343,6 +373,30 @@
         .btn-secundario:hover {
             background: #e2e8f0 !important;
             color: var(--texto-principal) !important;
+        }
+
+        /* Caixa explicativa da pontuação */
+        .box-regras-pontos {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 0.86rem;
+            color: #78350f;
+        }
+
+        .box-regras-pontos summary {
+            cursor: pointer;
+            font-weight: 700;
+            color: #92400e;
+        }
+
+        .grid-regras-pontos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         /* Cards Flutuantes */
@@ -411,7 +465,7 @@
             color: var(--texto-suave);
         }
 
-        /* Badges estáticas e Badges Interativas (selects embutidos) */
+        /* Badges */
         .badge {
             display: inline-block;
             padding: 3px 10px;
@@ -537,7 +591,7 @@
             text-transform: uppercase;
         }
 
-        /* Placar estilo videogame dos Coordenadores */
+        /* Placar Coordenadores */
         .placar-coord {
             margin-top: 14px;
             padding-top: 12px;
@@ -574,6 +628,18 @@
         }
 
         /* Auditoria */
+        .separador-data-audit {
+            display: inline-block;
+            margin: 18px 0 6px;
+            padding: 4px 12px;
+            background: #e2e8f0;
+            color: var(--azul-topo);
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+        }
+
         .lista-auditoria {
             list-style: none;
             padding: 0;
@@ -810,11 +876,11 @@
                     </div>
                     <p class="subtitulo">Resumo das 5 movimentações mais recentes na plataforma.</p>
 
-                    @if ($logsAuditoria->isEmpty())
+                    @if ($ultimasAtividades->isEmpty())
                     <p style="color: var(--texto-suave); font-size: 0.88rem;">Nenhuma atividade registrada ainda.</p>
                     @else
                     <ul class="lista-auditoria">
-                        @foreach ($logsAuditoria->take(5) as $log)
+                        @foreach ($ultimasAtividades as $log)
                         <li class="item-auditoria" style="padding: 9px 0;">
                             <div>
                                 <span class="audit-acao">{{ $log->acao }}</span>
@@ -829,28 +895,44 @@
             </div>
         </section>
 
-        {{-- ABA 2: ESTUDANTES (CARDS AZUIS + AÇÕES EMBUTIDAS NAS BADGES) --}}
+        {{-- ABA 2: ESTUDANTES --}}
         <section id="aba-estudantes" class="secao-aba {{ $filtros['aba'] === 'aba-estudantes' ? 'ativa' : '' }}">
             <div class="cartao">
                 <h2>Gestão de Estudantes</h2>
-                <p class="subtitulo">Clique diretamente nas badges de perfil ou status para alterar sem sair da sua posição. Use "Ver Ficha" para dados socioeconômicos.</p>
+                <p class="subtitulo">Filtre por nome, prefixo/grupo alfabético (ex: A, Ph, Caio), status, ficha ou ordem de adição. Clique nas badges para atualizar perfil ou status.</p>
 
                 <form method="GET" action="{{ route('diretoria.dashboard') }}" class="barra-filtros">
                     <input type="hidden" name="aba" value="aba-estudantes">
-                    <input type="text" name="busca" list="lista-sugestoes-nomes" value="{{ $filtros['busca'] }}" placeholder="Buscar estudante por nome ou e-mail..." aria-label="Buscar estudante">
+                    <input type="text" name="busca" list="lista-sugestoes-nomes" value="{{ $filtros['busca'] }}" placeholder="Buscar por nome ou e-mail..." aria-label="Buscar estudante">
+                    <input type="text" name="prefixo_estudante" class="input-prefixo" value="{{ $filtros['prefixo_estudante'] }}" placeholder="Começa com (A, Ph, Caio)" aria-label="Filtrar estudante por prefixo">
                     <select name="status" aria-label="Filtrar status">
                         <option value="">Todos os status</option>
-                        <option value="ATIVA" @selected($filtros['status']==='ATIVA' )>Ativa</option>
-                        <option value="BANIDA" @selected($filtros['status']==='BANIDA' )>Banida</option>
+                        <option value="ATIVA" @selected($filtros['status']==='ATIVA')>Ativa</option>
+                        <option value="BANIDA" @selected($filtros['status']==='BANIDA')>Banida</option>
                     </select>
                     <select name="ficha" aria-label="Filtrar por ficha">
                         <option value="">Com ou sem ficha</option>
-                        <option value="COM_FICHA" @selected($filtros['ficha']==='COM_FICHA' )>Ficha preenchida</option>
-                        <option value="SEM_FICHA" @selected($filtros['ficha']==='SEM_FICHA' )>Sem ficha</option>
+                        <option value="COM_FICHA" @selected($filtros['ficha']==='COM_FICHA')>Ficha preenchida</option>
+                        <option value="SEM_FICHA" @selected($filtros['ficha']==='SEM_FICHA')>Sem ficha</option>
+                    </select>
+                    <select name="ordenar_estudantes" aria-label="Ordenar estudantes por">
+                        <option value="criado_em" @selected($filtros['ordenar_estudantes']==='criado_em')>Ordenar: Data de adição</option>
+                        <option value="nome" @selected($filtros['ordenar_estudantes']==='nome')>Ordenar: Ordem alfabética</option>
+                    </select>
+                    <select name="direcao_estudantes" aria-label="Direção da ordenação">
+                        <option value="desc" @selected($filtros['direcao_estudantes']==='desc')>Decrescente (Z→A / Recentes)</option>
+                        <option value="asc" @selected($filtros['direcao_estudantes']==='asc')>Crescente (A→Z / Antigos)</option>
                     </select>
                     <button type="submit" class="btn-primario">Filtrar</button>
                     <a href="{{ route('diretoria.dashboard', ['aba' => 'aba-estudantes']) }}" class="btn-secundario">Limpar</a>
                 </form>
+
+                <div class="atalho-letras" aria-label="Filtro rápido de estudantes por letra inicial">
+                    <a href="{{ route('diretoria.dashboard', array_merge(request()->except('prefixo_estudante'), ['aba' => 'aba-estudantes'])) }}" class="letra-pill {{ $filtros['prefixo_estudante'] === '' ? 'ativa' : '' }}">Todos</a>
+                    @foreach (range('A', 'Z') as $letra)
+                    <a href="{{ route('diretoria.dashboard', array_merge(request()->all(), ['aba' => 'aba-estudantes', 'prefixo_estudante' => $letra])) }}" class="letra-pill {{ mb_strtoupper($filtros['prefixo_estudante']) === $letra ? 'ativa' : '' }}">{{ $letra }}</a>
+                    @endforeach
+                </div>
 
                 <div class="lista-cards">
                     @forelse ($estudantes as $aluno)
@@ -918,13 +1000,13 @@
             </div>
         </section>
 
-        {{-- ABA 3: EQUIPE & PONTUAÇÃO (GRÁFICO + FILTRO POR AÇÃO INDIVIDUAL) --}}
+        {{-- ABA 3: EQUIPE & PONTUAÇÃO --}}
         <section id="aba-equipe" class="secao-aba {{ $filtros['aba'] === 'aba-equipe' ? 'ativa' : '' }}">
             <div class="grid-duplo" style="margin-bottom: 20px;">
                 <div class="cartao" style="margin-bottom: 0;">
                     <h2>Top 5 Coordenadores Mais Ativos</h2>
                     <p class="subtitulo">Ranking dos 5 membros com maior pontuação geral, detalhando o tipo de ação.</p>
-                    <div class="grafico-equipe-container" style="margin-bottom: 0;">
+                    <div class="grafico-equipe-container">
                         <canvas id="graficoEquipe"></canvas>
                     </div>
                 </div>
@@ -943,7 +1025,7 @@
                         </select>
                     </div>
                     <p class="subtitulo">Passe o mouse sobre uma fatia para destacar o editor e ver ações e pontuação.</p>
-                    <div class="grafico-equipe-container" style="margin-bottom: 0;">
+                    <div class="grafico-equipe-container">
                         <canvas id="graficoPizzaEquipe"></canvas>
                     </div>
                 </div>
@@ -953,37 +1035,59 @@
                 <h2>Equipe Administrativa &amp; Pontuação</h2>
                 <p class="subtitulo">Diretores aparecem em vermelho (protegidos) e Coordenadores em amarelo. Clique nas badges para alterar cargo ou status.</p>
 
+                <details class="box-regras-pontos">
+                    <summary>ℹ️ Como funciona a pontuação (PTS) da equipe?</summary>
+                    <p style="margin: 8px 0 0;">Cada ação editorial registrada na auditoria soma automaticamente os pontos abaixo no placar do coordenador:</p>
+                    <div class="grid-regras-pontos">
+                        <span class="stat-pill">➕ Edital Criado: <strong>+{{ $acoesCoordenacao['EDITAL_CRIADO'] }} PTS</strong></span>
+                        <span class="stat-pill">✏️ Edital Editado: <strong>+{{ $acoesCoordenacao['EDITAL_EDITADO'] }} PTS</strong></span>
+                        <span class="stat-pill">🚀 Edital Publicado: <strong>+{{ $acoesCoordenacao['EDITAL_PUBLICADO'] }} PTS</strong></span>
+                        <span class="stat-pill">🔄 Regra Retificada: <strong>+{{ $acoesCoordenacao['REGRA_RETIFICADA'] }} PTS</strong></span>
+                        <span class="stat-pill">📦 Edital Arquivado: <strong>+{{ $acoesCoordenacao['EDITAL_ARQUIVADO'] }} PTS</strong></span>
+                    </div>
+                </details>
+
                 <form method="GET" action="{{ route('diretoria.dashboard') }}" class="barra-filtros">
                     <input type="hidden" name="aba" value="aba-equipe">
                     <input type="text" name="busca" list="lista-sugestoes-nomes" value="{{ $filtros['busca'] }}" placeholder="Buscar membro por nome ou e-mail..." aria-label="Buscar membro">
+                    <input type="text" name="prefixo_equipe" class="input-prefixo" value="{{ $filtros['prefixo_equipe'] }}" placeholder="Começa com (A, Ph, Caio)" aria-label="Filtrar equipe por prefixo">
                     <select name="perfil" aria-label="Filtrar cargo">
                         <option value="">Diretores e Coordenadores</option>
-                        <option value="DIRETOR" @selected($filtros['perfil']==='DIRETOR' )>Apenas Diretores</option>
-                        <option value="COORDENADOR" @selected($filtros['perfil']==='COORDENADOR' )>Apenas Coordenadores</option>
+                        <option value="DIRETOR" @selected($filtros['perfil']==='DIRETOR')>Apenas Diretores</option>
+                        <option value="COORDENADOR" @selected($filtros['perfil']==='COORDENADOR')>Apenas Coordenadores</option>
                     </select>
-                    <select name="metrica_equipe" aria-label="Filtrar por métrica">
-                        <option value="PONTOS" @selected($filtros['metrica_equipe']==='PONTOS' )>Métrica: Pontuação Geral (PTS)</option>
-                        <option value="EDITAL_CRIADO" @selected($filtros['metrica_equipe']==='EDITAL_CRIADO' )>Métrica: Editais Criados</option>
-                        <option value="EDITAL_EDITADO" @selected($filtros['metrica_equipe']==='EDITAL_EDITADO' )>Métrica: Editais Editados</option>
-                        <option value="EDITAL_PUBLICADO" @selected($filtros['metrica_equipe']==='EDITAL_PUBLICADO' )>Métrica: Editais Publicados</option>
-                        <option value="REGRA_RETIFICADA" @selected($filtros['metrica_equipe']==='REGRA_RETIFICADA' )>Métrica: Regras Retificadas</option>
-                        <option value="EDITAL_ARQUIVADO" @selected($filtros['metrica_equipe']==='EDITAL_ARQUIVADO' )>Métrica: Editais Arquivados</option>
+                    <select name="metrica_equipe" aria-label="Filtrar por métrica ou ordenação">
+                        <option value="PONTOS" @selected($filtros['metrica_equipe']==='PONTOS')>Ordenar: Pontuação Geral (PTS)</option>
+                        <option value="NOME" @selected($filtros['metrica_equipe']==='NOME')>Ordenar: Ordem alfabética</option>
+                        <option value="CRIADO_EM" @selected($filtros['metrica_equipe']==='CRIADO_EM')>Ordenar: Data de adição</option>
+                        <option value="EDITAL_CRIADO" @selected($filtros['metrica_equipe']==='EDITAL_CRIADO')>Métrica: Editais Criados</option>
+                        <option value="EDITAL_EDITADO" @selected($filtros['metrica_equipe']==='EDITAL_EDITADO')>Métrica: Editais Editados</option>
+                        <option value="EDITAL_PUBLICADO" @selected($filtros['metrica_equipe']==='EDITAL_PUBLICADO')>Métrica: Editais Publicados</option>
+                        <option value="REGRA_RETIFICADA" @selected($filtros['metrica_equipe']==='REGRA_RETIFICADA')>Métrica: Regras Retificadas</option>
+                        <option value="EDITAL_ARQUIVADO" @selected($filtros['metrica_equipe']==='EDITAL_ARQUIVADO')>Métrica: Editais Arquivados</option>
                     </select>
-                    <select name="ordem_pontos" aria-label="Ordenação">
-                        <option value="desc" @selected($filtros['ordem_pontos']==='desc' )>Maior → Menor</option>
-                        <option value="asc" @selected($filtros['ordem_pontos']==='asc' )>Menor → Maior</option>
+                    <select name="ordem_pontos" aria-label="Direção da ordenação">
+                        <option value="desc" @selected($filtros['ordem_pontos']==='desc')>Decrescente (Maior / Z→A / Recentes)</option>
+                        <option value="asc" @selected($filtros['ordem_pontos']==='asc')>Crescente (Menor / A→Z / Antigos)</option>
                     </select>
                     <button type="submit" class="btn-primario">Aplicar</button>
                     <a href="{{ route('diretoria.dashboard', ['aba' => 'aba-equipe']) }}" class="btn-secundario">Limpar</a>
                 </form>
+
+                <div class="atalho-letras" aria-label="Filtro rápido da equipe por letra inicial">
+                    <a href="{{ route('diretoria.dashboard', array_merge(request()->except('prefixo_equipe'), ['aba' => 'aba-equipe'])) }}" class="letra-pill {{ $filtros['prefixo_equipe'] === '' ? 'ativa' : '' }}">Todos</a>
+                    @foreach (range('A', 'Z') as $letra)
+                    <a href="{{ route('diretoria.dashboard', array_merge(request()->all(), ['aba' => 'aba-equipe', 'prefixo_equipe' => $letra])) }}" class="letra-pill {{ mb_strtoupper($filtros['prefixo_equipe']) === $letra ? 'ativa' : '' }}">{{ $letra }}</a>
+                    @endforeach
+                </div>
 
                 <div class="lista-cards">
                     @forelse ($equipe as $membro)
                     @php
                     $isDiretor = $membro->tipo_perfil === 'DIRETOR';
                     $stats = $estatisticasPorUsuario[$membro->id] ?? [
-                    'EDITAL_CRIADO' => 0, 'EDITAL_EDITADO' => 0, 'EDITAL_PUBLICADO' => 0,
-                    'REGRA_RETIFICADA' => 0, 'EDITAL_ARQUIVADO' => 0, 'total_acoes' => 0, 'pontos' => 0
+                        'EDITAL_CRIADO' => 0, 'EDITAL_EDITADO' => 0, 'EDITAL_PUBLICADO' => 0,
+                        'REGRA_RETIFICADA' => 0, 'EDITAL_ARQUIVADO' => 0, 'total_acoes' => 0, 'pontos' => 0
                     ];
                     @endphp
                     <div class="card-membro {{ $isDiretor ? 'nivel-diretor' : 'nivel-coordenador' }}">
@@ -1050,23 +1154,42 @@
         <section id="aba-auditoria" class="secao-aba {{ $filtros['aba'] === 'aba-auditoria' ? 'ativa' : '' }}">
             <div class="cartao">
                 <h2>Registro de Auditoria</h2>
-                <p class="subtitulo">Últimas 40 ações administrativas e editoriais registradas no sistema.</p>
+                <p class="subtitulo">Navegue rapidamente por dia usando as setas ou o calendário, ou consulte o histórico geral agrupado por data.</p>
+
+                <form method="GET" action="{{ route('diretoria.dashboard') }}" id="form-filtro-auditoria" class="barra-filtros">
+                    <input type="hidden" name="aba" value="aba-auditoria">
+                    <button type="button" class="btn-secundario" onclick="mudarDiaAuditoria(-1)" title="Dia anterior">◀ Dia anterior</button>
+                    <input type="date" id="input-data-auditoria" name="data_auditoria" value="{{ $filtros['data_auditoria'] }}" aria-label="Filtrar auditoria por data">
+                    <button type="button" class="btn-secundario" onclick="mudarDiaAuditoria(1)" title="Próximo dia">Próximo dia ▶</button>
+                    <button type="submit" class="btn-primario">Filtrar data</button>
+                    <button type="button" class="btn-secundario" onclick="irParaHojeAuditoria()">Hoje</button>
+                    <a href="{{ route('diretoria.dashboard', ['aba' => 'aba-auditoria']) }}" class="btn-secundario">Ver todas</a>
+                </form>
 
                 @if ($logsAuditoria->isEmpty())
-                <p style="color: var(--texto-suave); text-align: center; padding: 24px 0;">Nenhuma ação registrada até o momento.</p>
+                <p style="color: var(--texto-suave); text-align: center; padding: 24px 0;">
+                    Nenhuma ação registrada{{ $filtros['data_auditoria'] ? ' em ' . \Carbon\Carbon::parse($filtros['data_auditoria'])->format('d/m/Y') : ' até o momento' }}.
+                </p>
                 @else
+                @php
+                $logsPorData = $logsAuditoria->groupBy(fn($log) => $log->criado_em ? $log->criado_em->format('d/m/Y') : 'Sem data');
+                @endphp
+
+                @foreach ($logsPorData as $dataGrupo => $logsDoDia)
+                <div class="separador-data-audit">📅 {{ $dataGrupo }} ({{ $logsDoDia->count() }})</div>
                 <ul class="lista-auditoria">
-                    @foreach ($logsAuditoria as $log)
+                    @foreach ($logsDoDia as $log)
                     <li class="item-auditoria">
                         <div>
                             <span class="audit-acao">{{ $log->acao }}</span>
                             <p class="audit-detalhes">{{ $log->detalhes }}</p>
                             <small style="color: var(--texto-suave);">Responsável: <strong>{{ $log->ator?->nome ?? 'Sistema' }}</strong></small>
                         </div>
-                        <span class="audit-meta">{{ $log->criado_em ? $log->criado_em->format('d/m/Y H:i') : '—' }}</span>
+                        <span class="audit-meta">{{ $log->criado_em ? $log->criado_em->format('H:i') : '—' }}</span>
                     </li>
                     @endforeach
                 </ul>
+                @endforeach
                 @endif
             </div>
         </section>
@@ -1102,6 +1225,33 @@
             if (box) box.classList.toggle('aberto');
         }
 
+        function formatarDataIso(dataObj) {
+            const yyyy = dataObj.getFullYear();
+            const mm = String(dataObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dataObj.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function mudarDiaAuditoria(deltaDias) {
+            const input = document.getElementById('input-data-auditoria');
+            const form = document.getElementById('form-filtro-auditoria');
+            if (!input || !form) return;
+
+            const base = input.value ? new Date(input.value + 'T12:00:00') : new Date();
+            base.setDate(base.getDate() + deltaDias);
+            input.value = formatarDataIso(base);
+            form.submit();
+        }
+
+        function irParaHojeAuditoria() {
+            const input = document.getElementById('input-data-auditoria');
+            const form = document.getElementById('form-filtro-auditoria');
+            if (!input || !form) return;
+
+            input.value = formatarDataIso(new Date());
+            form.submit();
+        }
+
         function fecharModal(reverter = false) {
             if (reverter && selectAlteradoPendente) {
                 selectAlteradoPendente.value = selectAlteradoPendente.dataset.original;
@@ -1111,7 +1261,6 @@
             selectAlteradoPendente = null;
         }
 
-        // Ações integradas direto nas badges (dispara modal ao mudar o select)
         document.querySelectorAll('.select-auto-confirm').forEach(select => {
             select.addEventListener('change', function() {
                 const form = this.closest('.form-atualizar-conta');
@@ -1135,11 +1284,17 @@
             formularioPendente.submit();
         });
 
-        // Restaura aba, rolagem e aplica larguras das barras do funil
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.funil-barra[data-width]').forEach(barra => {
                 barra.style.width = `${barra.dataset.width}%`;
             });
+
+            const inputDataAudit = document.getElementById('input-data-auditoria');
+            if (inputDataAudit) {
+                inputDataAudit.addEventListener('change', () => {
+                    document.getElementById('form-filtro-auditoria')?.submit();
+                });
+            }
 
             const abaSalva = sessionStorage.getItem('diretoria_aba');
             const scrollSalvo = sessionStorage.getItem('diretoria_scroll');
@@ -1236,7 +1391,7 @@
             });
         }
 
-        // Gráfico 2A: Top 5 Coordenadores Mais Ativos (Barras Empilhadas)
+        // Gráfico 2A: Top 5 Coordenadores Mais Ativos
         const dadosEquipe = @json($dadosGraficoEquipe);
         const ctxEquipe = document.getElementById('graficoEquipe');
         if (ctxEquipe && typeof Chart !== 'undefined') {
@@ -1309,7 +1464,7 @@
             });
         }
 
-        // Gráfico 2B: Pizza Alterável estilo Google Sheets (com destaque e tooltip completo)
+        // Gráfico 2B: Pizza Alterável
         const ctxPizza = document.getElementById('graficoPizzaEquipe');
         const seletorPizza = document.getElementById('seletor-pizza-equipe');
         const paletaPizza = ['#2563eb', '#eab308', '#16a34a', '#dc2626', '#9333ea', '#0891b2', '#ea580c', '#4f46e5'];
